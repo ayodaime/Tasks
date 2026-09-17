@@ -108,14 +108,10 @@ persist there even with `UPLOAD_DIR` pointed at it. If you want Vercel specifica
 ## Managing roles
 
 Roles are `STAFF`, `MANAGER`, `ADMIN` (the `manager` picker on a task only lists
-`MANAGER`/`ADMIN` users). There's no admin UI for role changes yet — update directly via
-Prisma Studio:
-
-```bash
-npx prisma studio
-```
-
-Open the `User` table and change a person's `role` field.
+`MANAGER`/`ADMIN` users). Any admin can change roles from the app itself: sign in and
+click **Manage Staff** in the nav bar (only visible to admins) to see everyone who's
+registered and change their role from a dropdown. An admin can't change their own role
+there, to avoid accidentally locking themselves out.
 
 ## Project structure
 
