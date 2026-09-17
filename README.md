@@ -62,27 +62,47 @@ SQLite database and uploaded files. Two easy options:
    put Nginx/Caddy in front for HTTPS.
 5. Point your company's DNS (e.g. `tasks.acme.com`) at the server.
 
-### Option B — Render / Railway (managed, still simple)
+### Option B — Render (managed, still simple)
 
-1. Create a new "Web Service" from this repo. Build command: `npm run build`. Start
-   command: `npm start`.
-2. Attach a **persistent disk** (both platforms offer this) mounted so `prisma/dev.db`
-   and `public/uploads` survive restarts/deploys — without this the DB and file uploads
-   are wiped every deploy.
-3. Set the env vars from `.env.example` in the platform's dashboard.
-4. Run `npm run db:migrate` once via the platform's shell/console after first deploy.
+Render's app checkout is rebuilt from scratch on every deploy, so both the SQLite
+database file and uploaded attachments need to live on a **persistent disk** instead of
+inside the repo checkout. This repo is already set up for that via `UPLOAD_DIR`, and
+`npm run build` applies pending database migrations automatically (`prisma migrate
+deploy`), so no separate console/shell step is needed.
+
+1. Push this branch/PR to `main` (or point Render at this branch directly).
+2. On [render.com](https://render.com), **New → Web Service**, connect the
+   `ayodaime/Tasks` GitHub repo.
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+3. Under the service's **Disks** tab, add a disk — e.g. mount path `/var/data`, 1GB is
+   plenty to start.
+4. Under **Environment**, add:
+   - `DATABASE_URL` = `file:/var/data/prod.db`
+   - `UPLOAD_DIR` = `/var/data/uploads`
+   - `NEXTAUTH_SECRET` = output of `openssl rand -base64 32`
+   - `NEXTAUTH_URL` = the `.onrender.com` URL Render assigns you (or your custom domain,
+     once attached)
+   - `ALLOWED_EMAIL_DOMAINS` = your company's email domain, e.g. `acme.com`
+5. Deploy. Once it's live, open the URL, click **Register**, and create the first
+   account — it becomes admin.
+6. Optional: attach a custom domain (e.g. `tasks.acme.com`) under **Settings → Custom
+   Domains**, and update `NEXTAUTH_URL` to match.
+
+Railway works the same way — a web service from this repo, a persistent volume, and the
+same env vars, just adjust the volume's mount path.
 
 ### If you deploy to Vercel instead
 
-Vercel's filesystem is wiped on every deploy/serverless invocation, so SQLite and local
-file uploads won't persist there. If you want Vercel specifically:
+Vercel's filesystem is wiped on every deploy/serverless invocation, so SQLite won't
+persist there even with `UPLOAD_DIR` pointed at it. If you want Vercel specifically:
 
 1. Switch `prisma/schema.prisma`'s datasource `provider` from `"sqlite"` to `"postgresql"`
    and point `DATABASE_URL` at a hosted Postgres (e.g. Neon or Supabase's free tier).
 2. Re-run `npx prisma migrate dev` locally against that database once to generate a
    Postgres-compatible migration, then commit it.
-3. Swap the local file upload storage in
-   `src/app/api/tasks/[id]/attachments/route.ts` for an object store (e.g. S3 or
+3. Swap the local file storage in `src/app/api/tasks/[id]/attachments/route.ts` and
+   `src/app/api/uploads/[taskId]/[filename]/route.ts` for an object store (e.g. S3 or
    Vercel Blob), since local disk writes won't persist there either.
 
 ## Managing roles
@@ -104,5 +124,6 @@ prisma/schema.prisma        Database schema (User, Task, Comment, Attachment)
 src/app/                    Pages (dashboard, tasks, login/register) and API routes
 src/lib/auth.ts             NextAuth configuration
 src/lib/constants.ts        Status/priority/role enums and labels
-public/uploads/             Uploaded task attachments (persist this directory in prod)
+src/lib/uploads.ts          Resolves where attachments are stored (UPLOAD_DIR env var)
+public/uploads/             Default attachment storage for local dev
 ```
