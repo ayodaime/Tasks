@@ -105,13 +105,18 @@ persist there even with `UPLOAD_DIR` pointed at it. If you want Vercel specifica
    `src/app/api/uploads/[taskId]/[filename]/route.ts` for an object store (e.g. S3 or
    Vercel Blob), since local disk writes won't persist there either.
 
-## Managing roles
+## Managing roles and departments
 
 Roles are `STAFF`, `MANAGER`, `ADMIN` (the `manager` picker on a task only lists
-`MANAGER`/`ADMIN` users). Any admin can change roles from the app itself: sign in and
-click **Manage Staff** in the nav bar (only visible to admins) to see everyone who's
-registered and change their role from a dropdown. An admin can't change their own role
-there, to avoid accidentally locking themselves out.
+`MANAGER`/`ADMIN` users). Departments are Admin, Customer Service, Digital Marketing,
+SEO, PR, and HR — everyone picks theirs when registering. Any admin can change either
+from the app itself: sign in and click **Manage Staff** in the sidebar (only visible to
+admins) to see staff grouped by department, with a role and department dropdown per
+person. An admin can't change their own role there (to avoid accidentally locking
+themselves out), though they can change their own department.
+
+Accounts created before this field existed show up under "Not yet assigned" until an
+admin gives them a department.
 
 ## Project structure
 

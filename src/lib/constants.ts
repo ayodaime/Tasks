@@ -7,6 +7,25 @@ export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 export const USER_ROLES = ["STAFF", "MANAGER", "ADMIN"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
+export const DEPARTMENTS = [
+  "ADMINISTRATION",
+  "CUSTOMER_SERVICE",
+  "DIGITAL_MARKETING",
+  "SEO",
+  "PR",
+  "HR",
+] as const;
+export type Department = (typeof DEPARTMENTS)[number];
+
+export const DEPARTMENT_LABELS: Record<Department, string> = {
+  ADMINISTRATION: "Admin",
+  CUSTOMER_SERVICE: "Customer Service",
+  DIGITAL_MARKETING: "Digital Marketing",
+  SEO: "SEO",
+  PR: "PR",
+  HR: "HR",
+};
+
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "To Do",
   IN_PROGRESS: "In Progress",

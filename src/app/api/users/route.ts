@@ -8,7 +8,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true },
+    select: { id: true, name: true, email: true, role: true, department: true },
     orderBy: { name: "asc" },
   });
 

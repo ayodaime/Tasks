@@ -4,12 +4,14 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/constants";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [department, setDepartment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +23,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, department }),
     });
 
     if (!res.ok) {
@@ -90,6 +92,27 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
             <p className="mt-1 text-xs text-slate-400">At least 8 characters.</p>
+          </div>
+          <div>
+            <label className="label" htmlFor="department">
+              Department
+            </label>
+            <select
+              id="department"
+              required
+              className="input"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+            >
+              <option value="" disabled>
+                Select your department
+              </option>
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>
+                  {DEPARTMENT_LABELS[d]}
+                </option>
+              ))}
+            </select>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

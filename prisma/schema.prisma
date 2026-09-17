@@ -12,12 +12,15 @@ datasource db {
 }
 
 // role: "STAFF" | "MANAGER" | "ADMIN"
+// department: "ADMINISTRATION" | "CUSTOMER_SERVICE" | "DIGITAL_MARKETING" | "SEO" | "PR" | "HR" | null
+// (nullable so existing accounts from before this field existed aren't broken; an admin assigns one via Manage Staff)
 model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
   passwordHash String
   role         String   @default("STAFF")
+  department   String?
   createdAt    DateTime @default(now())
 
   tasksCreated  Task[]       @relation("CreatedBy")

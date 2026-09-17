@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Avatar from "@/components/Avatar";
 import SignOutButton from "@/components/SignOutButton";
+import { DEPARTMENT_LABELS, type Department } from "@/lib/constants";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -60,7 +61,10 @@ export default function Sidebar() {
           <Avatar name={session.user?.name ?? "?"} size="md" />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-slate-800">{session.user?.name}</p>
-            <p className="text-xs text-slate-400">{session.user.role}</p>
+            <p className="truncate text-xs text-slate-400">
+              {session.user.role}
+              {session.user.department && ` · ${DEPARTMENT_LABELS[session.user.department as Department] ?? session.user.department}`}
+            </p>
           </div>
         </div>
         <SignOutButton />

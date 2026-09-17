@@ -3,6 +3,7 @@ export type UserSummary = {
   name: string;
   email: string;
   role?: string;
+  department?: string | null;
 };
 
 export type TaskSummary = {
