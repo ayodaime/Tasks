@@ -24,6 +24,11 @@ export default async function Navbar() {
             <Link href="/tasks/new" className="hover:text-brand-600">
               New Task
             </Link>
+            {session.user.role === "ADMIN" && (
+              <Link href="/admin/users" className="hover:text-brand-600">
+                Manage Staff
+              </Link>
+            )}
           </nav>
         </div>
         <div className="flex items-center gap-3 text-sm">
