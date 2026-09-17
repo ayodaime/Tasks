@@ -5,16 +5,19 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { STATUS_LABELS, TASK_STATUSES } from "@/lib/constants";
 import { StatusBadge, PriorityBadge } from "@/components/Badges";
+import { taskAccessWhere } from "@/lib/taskAccess";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
+  const accessWhere = taskAccessWhere(session.user);
+
   const [statusCounts, totalTasks, overdueTasks, myTasks, recentTasks] = await Promise.all([
-    prisma.task.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.task.count(),
+    prisma.task.groupBy({ where: accessWhere, by: ["status"], _count: { _all: true } }),
+    prisma.task.count({ where: accessWhere }),
     prisma.task.findMany({
-      where: { dueDate: { lt: new Date() }, status: { not: "DONE" } },
+      where: { ...accessWhere, dueDate: { lt: new Date() }, status: { not: "DONE" } },
       orderBy: { dueDate: "asc" },
       take: 5,
       include: { assignee: { select: { id: true, name: true, email: true } } },
@@ -25,6 +28,7 @@ export default async function DashboardPage() {
       take: 5,
     }),
     prisma.task.findMany({
+      where: accessWhere,
       orderBy: { createdAt: "desc" },
       take: 6,
       include: {

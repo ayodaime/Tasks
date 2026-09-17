@@ -32,12 +32,14 @@ model User {
 
 // status: "TODO" | "IN_PROGRESS" | "BLOCKED" | "DONE"
 // priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+// department: same values as User.department, or null (unclassified — admin-only until set)
 model Task {
   id          String    @id @default(cuid())
   title       String
   description String
   status      String    @default("TODO")
   priority    String    @default("MEDIUM")
+  department  String?
   dueDate     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -57,6 +59,7 @@ model Task {
   @@index([status])
   @@index([assigneeId])
   @@index([managerId])
+  @@index([department])
 }
 
 model Comment {

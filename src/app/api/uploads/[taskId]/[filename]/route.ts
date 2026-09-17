@@ -4,6 +4,8 @@ import { readFile, stat } from "fs/promises";
 import path from "path";
 import { authOptions } from "@/lib/auth";
 import { UPLOAD_ROOT } from "@/lib/uploads";
+import { prisma } from "@/lib/prisma";
+import { canAccessTask } from "@/lib/taskAccess";
 
 export async function GET(
   _req: Request,
@@ -18,6 +20,11 @@ export async function GET(
   const safeTaskId = path.basename(taskId);
   const safeFilename = path.basename(filename);
   if (safeTaskId !== taskId || safeFilename !== filename) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
+  const task = await prisma.task.findUnique({ where: { id: safeTaskId } });
+  if (!task || !canAccessTask(task, session.user)) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 

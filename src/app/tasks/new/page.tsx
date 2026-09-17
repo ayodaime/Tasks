@@ -1,25 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
-import { TASK_PRIORITIES, PRIORITY_LABELS } from "@/lib/constants";
+import { useSession } from "next-auth/react";
+import { TASK_PRIORITIES, PRIORITY_LABELS, DEPARTMENTS, DEPARTMENT_LABELS, type Department } from "@/lib/constants";
 import type { UserSummary } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function NewTaskPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
+  const isAdmin = session?.user.role === "ADMIN";
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
+  const [department, setDepartment] = useState<string>(
+    (session?.user.department as Department) ?? DEPARTMENTS[0]
+  );
   const [assigneeId, setAssigneeId] = useState("");
   const [managerId, setManagerId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (session?.user.department) setDepartment(session.user.department);
+  }, [session?.user.department]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,7 +39,7 @@ export default function NewTaskPage() {
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, priority, assigneeId, managerId, dueDate }),
+      body: JSON.stringify({ title, description, priority, department, assigneeId, managerId, dueDate }),
     });
 
     setLoading(false);
@@ -72,6 +82,33 @@ export default function NewTaskPage() {
             onChange={(e) => setDescription(e.target.value)}
           />
         </div>
+
+        {isAdmin && (
+          <div>
+            <label className="label" htmlFor="department">
+              Department
+            </label>
+            <select
+              id="department"
+              className="input"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+            >
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>
+                  {DEPARTMENT_LABELS[d]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {!isAdmin && session && !session.user.department && (
+          <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            You don&apos;t have a department assigned yet. Ask an admin to set one in Manage Staff before
+            creating tasks.
+          </p>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -137,7 +174,11 @@ export default function NewTaskPage() {
           <button type="button" className="btn-secondary" onClick={() => router.back()}>
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button
+            type="submit"
+            disabled={loading || (!isAdmin && !!session && !session.user.department)}
+            className="btn-primary"
+          >
             {loading ? "Creating..." : "Create task"}
           </button>
         </div>

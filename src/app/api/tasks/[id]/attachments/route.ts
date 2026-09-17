@@ -6,6 +6,7 @@ import path from "path";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UPLOAD_ROOT } from "@/lib/uploads";
+import { canAccessTask } from "@/lib/taskAccess";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -15,7 +16,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
   const task = await prisma.task.findUnique({ where: { id } });
-  if (!task) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  if (!task || !canAccessTask(task, session.user)) {
+    return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  }
 
   const formData = await req.formData().catch(() => null);
   const file = formData?.get("file");

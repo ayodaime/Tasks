@@ -118,7 +118,18 @@ themselves out), though they can change their own department.
 Accounts created before this field existed show up under "Not yet assigned" until an
 admin gives them a department.
 
-## Project structure
+### Department-scoped task access
+
+Every task belongs to a department (set by an admin when creating it, or automatically
+to the creator's own department for everyone else). Staff and managers only ever see
+tasks in their own department — this applies everywhere: the dashboard, the task board
+and list, and direct links, including file attachments. There's one exception: if you're
+personally the assignee, manager in charge, or creator of a task, you can always see it
+even if it's in a different department (so a cross-department assignment never locks
+someone out of a task they were actually given). Admins are unrestricted and see every
+department; they also get a Department filter on the task board and a Department field
+when creating a task or editing an existing one. A task with no department yet
+("Unclassified") is only visible to admins until one sets its department.
 
 ```
 prisma/schema.prisma        Database schema (User, Task, Comment, Attachment)

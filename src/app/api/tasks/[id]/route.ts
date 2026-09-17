@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
+import { DEPARTMENTS, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
+import { canAccessTask } from "@/lib/taskAccess";
 
 const taskDetailInclude = {
   createdBy: { select: { id: true, name: true, email: true } },
@@ -28,7 +29,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     include: taskDetailInclude,
   });
 
-  if (!task) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  if (!task || !canAccessTask(task, session.user)) {
+    return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  }
   return NextResponse.json(task);
 }
 
@@ -38,7 +41,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
   const existing = await prisma.task.findUnique({ where: { id } });
-  if (!existing) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  if (!existing || !canAccessTask(existing, session.user)) {
+    return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  }
 
   const body = await req.json().catch(() => null);
   const data: Record<string, unknown> = {};
@@ -56,6 +61,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: "Invalid priority." }, { status: 400 });
     }
     data.priority = body.priority;
+  }
+  if ("department" in (body ?? {})) {
+    // Moving a task to another department is an org-structure change, not a
+    // day-to-day edit, and could cut off the current viewer's own access —
+    // reserve it for admins, who see every department regardless.
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Only admins can change a task's department." }, { status: 403 });
+    }
+    if (!(DEPARTMENTS as readonly string[]).includes(body.department)) {
+      return NextResponse.json({ error: "Invalid department." }, { status: 400 });
+    }
+    data.department = body.department;
   }
   if ("assigneeId" in (body ?? {})) data.assigneeId = body.assigneeId || null;
   if ("managerId" in (body ?? {})) data.managerId = body.managerId || null;
@@ -76,7 +93,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
   const task = await prisma.task.findUnique({ where: { id } });
-  if (!task) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  if (!task || !canAccessTask(task, session.user)) {
+    return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  }
 
   const isPrivileged = session.user.role === "ADMIN" || session.user.role === "MANAGER";
   if (task.createdById !== session.user.id && !isPrivileged) {

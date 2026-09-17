@@ -2,12 +2,16 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
+import { useSession } from "next-auth/react";
 import { StatusBadge, PriorityBadge } from "@/components/Badges";
 import {
   TASK_STATUSES,
   TASK_PRIORITIES,
   STATUS_LABELS,
   PRIORITY_LABELS,
+  DEPARTMENTS,
+  DEPARTMENT_LABELS,
+  type Department,
 } from "@/lib/constants";
 import type { TaskDetail, UserSummary } from "@/lib/types";
 
@@ -26,6 +30,8 @@ export default function TaskDetailContent({
   taskId: string;
   onDeleted: () => void;
 }) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user.role === "ADMIN";
   const { data: task, mutate, isLoading } = useSWR<TaskDetail>(`/api/tasks/${taskId}`, fetcher);
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
 
@@ -95,7 +101,28 @@ export default function TaskDetailContent({
 
         {task.description && <p className="mt-4 whitespace-pre-wrap text-slate-700">{task.description}</p>}
 
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+          <div>
+            <label className="label">Department</label>
+            {isAdmin ? (
+              <select
+                className="input"
+                value={task.department ?? ""}
+                onChange={(e) => updateField("department", e.target.value)}
+              >
+                {!task.department && <option value="">Unclassified</option>}
+                {DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>
+                    {DEPARTMENT_LABELS[d]}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="input flex items-center bg-slate-50 text-slate-600">
+                {task.department ? DEPARTMENT_LABELS[task.department as Department] ?? task.department : "Unclassified"}
+              </p>
+            )}
+          </div>
           <div>
             <label className="label">Status</label>
             <select className="input" value={task.status} onChange={(e) => updateField("status", e.target.value)}>

@@ -12,6 +12,7 @@ export type TaskSummary = {
   description: string;
   status: string;
   priority: string;
+  department: string | null;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;

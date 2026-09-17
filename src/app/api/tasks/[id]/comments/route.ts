@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessTask } from "@/lib/taskAccess";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -9,7 +10,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
   const task = await prisma.task.findUnique({ where: { id } });
-  if (!task) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  if (!task || !canAccessTask(task, session.user)) {
+    return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  }
 
   const body = await req.json().catch(() => null);
   const text = typeof body?.body === "string" ? body.body.trim() : "";
