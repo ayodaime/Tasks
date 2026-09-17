@@ -41,7 +41,11 @@ export default function NewTaskPage() {
     }
 
     const task = await res.json();
-    router.push(`/tasks/${task.id}`);
+    // Full navigation, not router.push: this page was itself reached via a
+    // full nav (see Sidebar/"+ New Task"), so a client-side push here would
+    // render the task's slide-over on top of this now-stale form instead of
+    // a clean full-page view.
+    window.location.href = `/tasks/${task.id}`;
   }
 
   return (

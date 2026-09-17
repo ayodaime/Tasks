@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
+import Avatar from "@/components/Avatar";
+import TaskBoard from "@/components/TaskBoard";
 import { StatusBadge, PriorityBadge } from "@/components/Badges";
 import { TASK_PRIORITIES, TASK_STATUSES, STATUS_LABELS, PRIORITY_LABELS } from "@/lib/constants";
 import type { TaskSummary, UserSummary } from "@/lib/types";
@@ -10,6 +12,7 @@ import type { TaskSummary, UserSummary } from "@/lib/types";
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function TasksPage() {
+  const [view, setView] = useState<"board" | "list">("board");
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
@@ -24,19 +27,50 @@ export default function TasksPage() {
     return params.toString();
   }, [status, priority, assigneeId, managerId]);
 
-  const { data: tasks, isLoading } = useSWR<TaskSummary[]>(`/api/tasks?${query}`, fetcher);
+  const { data: tasks, isLoading, mutate } = useSWR<TaskSummary[]>(`/api/tasks?${query}`, fetcher);
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
+
+  async function handleStatusChange(taskId: string, newStatus: string) {
+    mutate(
+      (current) => current?.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
+      { revalidate: false }
+    );
+    await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    mutate();
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">All Tasks</h1>
-        <Link href="/tasks/new" className="btn-primary">
+        {/* Plain <a>, not <Link>: client-side nav here would trigger the
+            @modal intercepting route for /tasks/[id], mistaking "new" for a
+            task id. A full navigation bypasses interception entirely. */}
+        <a href="/tasks/new" className="btn-primary">
           + New Task
-        </Link>
+        </a>
       </div>
 
-      <div className="card flex flex-wrap gap-3 p-4">
+      <div className="card flex flex-wrap items-center gap-3 p-4">
+        <div className="flex rounded-md border border-slate-300 p-0.5 text-sm">
+          <button
+            onClick={() => setView("board")}
+            className={`rounded px-3 py-1 ${view === "board" ? "bg-brand-500 text-white" : "text-slate-600"}`}
+          >
+            Board
+          </button>
+          <button
+            onClick={() => setView("list")}
+            className={`rounded px-3 py-1 ${view === "list" ? "bg-brand-500 text-white" : "text-slate-600"}`}
+          >
+            List
+          </button>
+        </div>
+
         <select className="input w-auto" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>
           {TASK_STATUSES.map((s) => (
@@ -86,29 +120,39 @@ export default function TasksPage() {
         )}
       </div>
 
-      <div className="card divide-y divide-slate-100">
-        {isLoading && <p className="p-4 text-sm text-slate-500">Loading...</p>}
-        {!isLoading && tasks?.length === 0 && <p className="p-4 text-sm text-slate-500">No tasks match these filters.</p>}
-        {tasks?.map((t) => (
-          <Link
-            key={t.id}
-            href={`/tasks/${t.id}`}
-            className="flex flex-wrap items-center justify-between gap-2 p-4 hover:bg-slate-50"
-          >
-            <div className="min-w-0">
-              <p className="truncate font-medium">{t.title}</p>
-              <p className="text-xs text-slate-500">
-                Assignee: {t.assignee?.name ?? "Unassigned"} &middot; Manager: {t.manager?.name ?? "None"}
-                {t.dueDate && <> &middot; Due {new Date(t.dueDate).toLocaleDateString()}</>}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <PriorityBadge priority={t.priority} />
-              <StatusBadge status={t.status} />
-            </div>
-          </Link>
-        ))}
-      </div>
+      {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+      {!isLoading && tasks?.length === 0 && <p className="text-sm text-slate-500">No tasks match these filters.</p>}
+
+      {!isLoading && tasks && tasks.length > 0 && view === "board" && (
+        <TaskBoard tasks={tasks} onStatusChange={handleStatusChange} />
+      )}
+
+      {!isLoading && tasks && tasks.length > 0 && view === "list" && (
+        <div className="card divide-y divide-slate-100">
+          {tasks.map((t) => (
+            <Link
+              key={t.id}
+              href={`/tasks/${t.id}`}
+              className="flex flex-wrap items-center justify-between gap-2 p-4 hover:bg-slate-50"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                {t.assignee && <Avatar name={t.assignee.name} size="sm" />}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{t.title}</p>
+                  <p className="text-xs text-slate-500">
+                    Assignee: {t.assignee?.name ?? "Unassigned"} &middot; Manager: {t.manager?.name ?? "None"}
+                    {t.dueDate && <> &middot; Due {new Date(t.dueDate).toLocaleDateString()}</>}
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <PriorityBadge priority={t.priority} />
+                <StatusBadge status={t.status} />
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

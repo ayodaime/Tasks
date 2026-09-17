@@ -1,0 +1,70 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import Avatar from "@/components/Avatar";
+import SignOutButton from "@/components/SignOutButton";
+
+const LINKS = [
+  { href: "/", label: "Dashboard" },
+  { href: "/tasks", label: "All Tasks" },
+  { href: "/tasks/new", label: "New Task" },
+];
+
+export default function Sidebar() {
+  const { data: session } = useSession();
+  const pathname = usePathname();
+
+  if (!session) return null;
+
+  const links = [...LINKS];
+  if (session.user.role === "ADMIN") {
+    links.push({ href: "/admin/users", label: "Manage Staff" });
+  }
+
+  return (
+    <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-slate-200 bg-white">
+      <div className="px-4 py-5">
+        <Link href="/" className="text-lg font-semibold text-brand-700">
+          Company Tasks
+        </Link>
+      </div>
+
+      <nav className="flex-1 space-y-1 px-3">
+        {links.map((link) => {
+          const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+          const className = `block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+            active ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          }`;
+          // Plain <a> for /tasks/new: Next's client-side Link would trigger the
+          // @modal intercepting route for /tasks/[id], mistaking "new" for a
+          // task id. A full navigation bypasses interception entirely.
+          if (link.href === "/tasks/new") {
+            return (
+              <a key={link.href} href={link.href} className={className}>
+                {link.label}
+              </a>
+            );
+          }
+          return (
+            <Link key={link.href} href={link.href} className={className}>
+              {link.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-slate-200 p-3">
+        <div className="flex items-center gap-2 px-1 py-2">
+          <Avatar name={session.user?.name ?? "?"} size="md" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-slate-800">{session.user?.name}</p>
+            <p className="text-xs text-slate-400">{session.user.role}</p>
+          </div>
+        </div>
+        <SignOutButton />
+      </div>
+    </aside>
+  );
+}
