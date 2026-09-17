@@ -5,9 +5,9 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { UPLOAD_ROOT } from "@/lib/uploads";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -37,7 +37,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const attachment = await prisma.attachment.create({
     data: {
       filename: file.name,
-      filepath: `/uploads/${id}/${storedName}`,
+      filepath: `/api/uploads/${id}/${storedName}`,
       size: file.size,
       taskId: id,
       uploadedById: session.user.id,
