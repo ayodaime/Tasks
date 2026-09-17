@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   description: "Upload and track your team's tasks",
 };
 
+// Every page depends on the signed-in user's session and live data, so
+// there's nothing to gain from static prerendering — and doing it at build
+// time requires a valid NEXTAUTH_URL to be set before the app ever runs.
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
