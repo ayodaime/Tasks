@@ -1,0 +1,114 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import useSWR from "swr";
+import { StatusBadge, PriorityBadge } from "@/components/Badges";
+import { TASK_PRIORITIES, TASK_STATUSES, STATUS_LABELS, PRIORITY_LABELS } from "@/lib/constants";
+import type { TaskSummary, UserSummary } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+export default function TasksPage() {
+  const [status, setStatus] = useState("");
+  const [priority, setPriority] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
+  const [managerId, setManagerId] = useState("");
+
+  const query = useMemo(() => {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (priority) params.set("priority", priority);
+    if (assigneeId) params.set("assigneeId", assigneeId);
+    if (managerId) params.set("managerId", managerId);
+    return params.toString();
+  }, [status, priority, assigneeId, managerId]);
+
+  const { data: tasks, isLoading } = useSWR<TaskSummary[]>(`/api/tasks?${query}`, fetcher);
+  const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">All Tasks</h1>
+        <Link href="/tasks/new" className="btn-primary">
+          + New Task
+        </Link>
+      </div>
+
+      <div className="card flex flex-wrap gap-3 p-4">
+        <select className="input w-auto" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          {TASK_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s]}
+            </option>
+          ))}
+        </select>
+        <select className="input w-auto" value={priority} onChange={(e) => setPriority(e.target.value)}>
+          <option value="">All priorities</option>
+          {TASK_PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              {PRIORITY_LABELS[p]}
+            </option>
+          ))}
+        </select>
+        <select className="input w-auto" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+          <option value="">Any assignee</option>
+          {users?.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
+        <select className="input w-auto" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
+          <option value="">Any manager</option>
+          {users
+            ?.filter((u) => u.role === "MANAGER" || u.role === "ADMIN")
+            .map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+        </select>
+        {(status || priority || assigneeId || managerId) && (
+          <button
+            className="btn-secondary"
+            onClick={() => {
+              setStatus("");
+              setPriority("");
+              setAssigneeId("");
+              setManagerId("");
+            }}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      <div className="card divide-y divide-slate-100">
+        {isLoading && <p className="p-4 text-sm text-slate-500">Loading...</p>}
+        {!isLoading && tasks?.length === 0 && <p className="p-4 text-sm text-slate-500">No tasks match these filters.</p>}
+        {tasks?.map((t) => (
+          <Link
+            key={t.id}
+            href={`/tasks/${t.id}`}
+            className="flex flex-wrap items-center justify-between gap-2 p-4 hover:bg-slate-50"
+          >
+            <div className="min-w-0">
+              <p className="truncate font-medium">{t.title}</p>
+              <p className="text-xs text-slate-500">
+                Assignee: {t.assignee?.name ?? "Unassigned"} &middot; Manager: {t.manager?.name ?? "None"}
+                {t.dueDate && <> &middot; Due {new Date(t.dueDate).toLocaleDateString()}</>}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <PriorityBadge priority={t.priority} />
+              <StatusBadge status={t.status} />
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
