@@ -32,7 +32,7 @@ export default function TaskDetailContent({
 }) {
   const { data: session } = useSession();
   const isAdmin = session?.user.role === "ADMIN";
-  const canAssign = session?.user.role !== "STAFF";
+  const canAssign = session?.user.role !== "OFFICER";
   const { data: task, mutate, isLoading } = useSWR<TaskDetail>(`/api/tasks/${taskId}`, fetcher);
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
 
@@ -180,7 +180,9 @@ export default function TaskDetailContent({
                 {/* Non-admins can only put a manager from the same team (department) in charge. */}
                 {users
                   ?.filter(
-                    (u) => (u.role === "MANAGER" || u.role === "ADMIN") && (isAdmin || u.department === task.department)
+                    (u) =>
+                      (u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN") &&
+                      (isAdmin || u.department === task.department)
                   )
                   .map((u) => (
                     <option key={u.id} value={u.id}>

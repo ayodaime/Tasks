@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { DEPARTMENTS, DEPARTMENT_LABELS, USER_ROLES, type Department } from "@/lib/constants";
+import { DEPARTMENTS, DEPARTMENT_LABELS, USER_ROLES, ROLE_LABELS, type Department } from "@/lib/constants";
 import type { UserSummary } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -72,7 +72,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                     <td className="px-4 py-3 text-slate-500">{u.email}</td>
                     <td className="px-4 py-3">
                       {u.id === currentUserId ? (
-                        <span className="text-slate-500">{u.role} (you)</span>
+                        <span className="text-slate-500">{ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] ?? u.role} (you)</span>
                       ) : (
                         <select
                           className="input w-auto"
@@ -82,7 +82,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                         >
                           {USER_ROLES.map((r) => (
                             <option key={r} value={r}>
-                              {r}
+                              {ROLE_LABELS[r]}
                             </option>
                           ))}
                         </select>

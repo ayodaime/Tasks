@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/constants";
+import { DEPARTMENTS, DEPARTMENT_LABELS, REGISTRATION_ROLES, ROLE_LABELS } from "@/lib/constants";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [department, setDepartment] = useState("");
+  const [role, setRole] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +24,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, department }),
+      body: JSON.stringify({ name, email, password, department, role }),
     });
 
     if (!res.ok) {
@@ -110,6 +111,21 @@ export default function RegisterPage() {
               {DEPARTMENTS.map((d) => (
                 <option key={d} value={d}>
                   {DEPARTMENT_LABELS[d]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="role">
+              Role
+            </label>
+            <select id="role" required className="input" value={role} onChange={(e) => setRole(e.target.value)}>
+              <option value="" disabled>
+                Select your role
+              </option>
+              {REGISTRATION_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
                 </option>
               ))}
             </select>

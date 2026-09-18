@@ -107,9 +107,9 @@ persist there even with `UPLOAD_DIR` pointed at it. If you want Vercel specifica
 
 ## Managing roles and departments
 
-Roles are `STAFF`, `MANAGER`, `ADMIN` (the `manager` picker on a task only lists
-`MANAGER`/`ADMIN` users). Departments are Admin, Customer Service, Digital Marketing,
-SEO, PR, and HR — everyone picks theirs when registering. Any admin can change either
+Roles are `OFFICER`, `SUPERVISOR`, `MANAGER`, `ADMIN` — see "Roles" below for who can do
+what. Departments are Admin, Customer Service, Digital Marketing, SEO, PR, and HR —
+everyone picks theirs (and their role) when registering. Any admin can change either
 from the app itself: sign in and click **Manage Staff** in the sidebar (only visible to
 admins) to see staff grouped by department, with a role and department dropdown per
 person. An admin can't change their own role there (to avoid accidentally locking
@@ -133,14 +133,27 @@ board and a Department field when creating a task or editing an existing one. A 
 with no department yet ("Unclassified") is only visible to admins until one sets its
 department.
 
-### Who can create and assign tasks
+### Roles
 
-Only `MANAGER` and `ADMIN` accounts can create tasks or assign them (the "New Task"
-button and the Assignee field's dropdown are hidden from `STAFF` entirely, and the API
-rejects both if attempted directly). Staff can still update the status/priority of a
-task they're on, post progress comments, and upload attachments — they just don't create
-or hand out new tasks. A manager can only assign a task — or name a manager in charge —
-to someone on their own team (department); admins can assign across any department.
+Four roles, in ascending order of privilege: `OFFICER`, `SUPERVISOR`, `MANAGER`,
+`ADMIN`. Everyone picks Manager, Supervisor, or Officer when they register — `ADMIN` is
+never self-selectable, it's only granted automatically to the very first account created,
+or later by an existing admin via Manage Staff.
+
+Only `SUPERVISOR`, `MANAGER`, and `ADMIN` accounts can create tasks or assign them (the
+"New Task" button and the Assignee field's dropdown are hidden from `OFFICER` entirely,
+and the API rejects both if attempted directly). Officers can still update the
+status/priority of a task they're on, post progress comments, and upload attachments —
+they just don't create or hand out new tasks. A supervisor or manager can only assign a
+task — or name a manager in charge — to someone on their own team (department); admins
+can assign across any department.
+
+Note this is a self-service choice at registration: anyone who can register (subject to
+`ALLOWED_EMAIL_DOMAINS`) can pick Supervisor or Manager for themselves and immediately
+get task-creation/assignment rights, with no admin approval step. If you'd rather gate
+that behind admin approval instead, an admin can always demote someone's role afterward
+in Manage Staff — worth knowing if that self-service model doesn't fit how your company
+wants to run this.
 
 ```
 prisma/schema.prisma        Database schema (User, Task, Comment, Attachment)

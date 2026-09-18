@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Avatar from "@/components/Avatar";
 import SignOutButton from "@/components/SignOutButton";
-import { DEPARTMENT_LABELS, type Department } from "@/lib/constants";
+import { DEPARTMENT_LABELS, ROLE_LABELS, type Department, type UserRole } from "@/lib/constants";
 
 const BASE_LINKS = [
   { href: "/", label: "Dashboard" },
@@ -19,9 +19,9 @@ export default function Sidebar() {
   if (!session) return null;
 
   const links = [...BASE_LINKS];
-  // Task creation/assignment is a manager+ responsibility; plain staff track
+  // Task creation/assignment is a supervisor+ responsibility; officers track
   // and update the tasks they're given, but don't create or hand out new ones.
-  if (session.user.role !== "STAFF") {
+  if (session.user.role !== "OFFICER") {
     links.push({ href: "/tasks/new", label: "New Task" });
   }
   if (session.user.role === "ADMIN") {
@@ -66,7 +66,7 @@ export default function Sidebar() {
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-slate-800">{session.user?.name}</p>
             <p className="truncate text-xs text-slate-400">
-              {session.user.role}
+              {ROLE_LABELS[session.user.role as UserRole] ?? session.user.role}
               {session.user.department && ` · ${DEPARTMENT_LABELS[session.user.department as Department] ?? session.user.department}`}
             </p>
           </div>

@@ -4,8 +4,24 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
-export const USER_ROLES = ["STAFF", "MANAGER", "ADMIN"] as const;
+// OFFICER: base role, works on assigned tasks only.
+// SUPERVISOR / MANAGER: equivalent tiers that can create and assign tasks
+// within their own department.
+// ADMIN: full access across departments; never self-selectable at
+// registration, only granted via Manage Staff (or automatically to the
+// very first account created).
+export const USER_ROLES = ["OFFICER", "SUPERVISOR", "MANAGER", "ADMIN"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
+
+// Roles someone can pick for themselves when registering.
+export const REGISTRATION_ROLES = ["MANAGER", "SUPERVISOR", "OFFICER"] as const;
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  OFFICER: "Officer",
+  SUPERVISOR: "Supervisor",
+  MANAGER: "Manager",
+  ADMIN: "Admin",
+};
 
 export const DEPARTMENTS = [
   "ADMINISTRATION",

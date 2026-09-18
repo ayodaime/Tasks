@@ -75,8 +75,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     data.department = body.department;
   }
   if ("assigneeId" in (body ?? {})) {
-    // Assigning is a manager/admin decision, same as creating a task.
-    if (session.user.role === "STAFF") {
+    // Assigning is a manager/supervisor/admin decision, same as creating a task.
+    if (session.user.role === "OFFICER") {
       return NextResponse.json({ error: "Only managers and admins can assign tasks." }, { status: 403 });
     }
     const newAssigneeId = body.assigneeId || null;
@@ -96,8 +96,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     data.assigneeId = newAssigneeId;
   }
   if ("managerId" in (body ?? {})) {
-    // Naming a manager in charge is a manager/admin decision too.
-    if (session.user.role === "STAFF") {
+    // Naming a manager in charge is a manager/supervisor/admin decision too.
+    if (session.user.role === "OFFICER") {
       return NextResponse.json({ error: "Only managers and admins can set who's in charge." }, { status: 403 });
     }
     const newManagerId = body.managerId || null;
@@ -136,7 +136,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Task not found." }, { status: 404 });
   }
 
-  const isPrivileged = session.user.role === "ADMIN" || session.user.role === "MANAGER";
+  const isPrivileged = ["ADMIN", "MANAGER", "SUPERVISOR"].includes(session.user.role);
   if (task.createdById !== session.user.id && !isPrivileged) {
     return NextResponse.json({ error: "You can't delete this task." }, { status: 403 });
   }

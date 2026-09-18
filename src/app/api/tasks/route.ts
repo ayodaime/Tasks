@@ -46,8 +46,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role === "STAFF") {
-    return NextResponse.json({ error: "Only managers and admins can create tasks." }, { status: 403 });
+  if (session.user.role === "OFFICER") {
+    return NextResponse.json({ error: "Only supervisors, managers, and admins can create tasks." }, { status: 403 });
   }
 
   const body = await req.json().catch(() => null);

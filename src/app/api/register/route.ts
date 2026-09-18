@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { DEPARTMENTS } from "@/lib/constants";
+import { DEPARTMENTS, REGISTRATION_ROLES } from "@/lib/constants";
 
 function isAllowedDomain(email: string): boolean {
   const raw = process.env.ALLOWED_EMAIL_DOMAINS?.trim();
@@ -23,16 +23,23 @@ export async function POST(req: Request) {
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body?.password === "string" ? body.password : "";
   const department = typeof body?.department === "string" ? body.department : "";
+  const requestedRole = typeof body?.role === "string" ? body.role : "";
 
-  if (!name || !email || !password || !department) {
+  if (!name || !email || !password || !department || !requestedRole) {
     return NextResponse.json(
-      { error: "Name, email, password, and department are required." },
+      { error: "Name, email, password, department, and role are required." },
       { status: 400 }
     );
   }
 
   if (!(DEPARTMENTS as readonly string[]).includes(department)) {
     return NextResponse.json({ error: "Select a valid department." }, { status: 400 });
+  }
+
+  // ADMIN is granted, never self-selected (except automatically for the
+  // very first account, below).
+  if (!(REGISTRATION_ROLES as readonly string[]).includes(requestedRole)) {
+    return NextResponse.json({ error: "Select a valid role." }, { status: 400 });
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -65,7 +72,7 @@ export async function POST(req: Request) {
       passwordHash,
       department,
       // First person to register becomes admin so someone can manage the team.
-      role: userCount === 0 ? "ADMIN" : "STAFF",
+      role: userCount === 0 ? "ADMIN" : requestedRole,
     },
   });
 

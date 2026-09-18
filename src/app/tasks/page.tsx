@@ -62,7 +62,7 @@ export default function TasksPage() {
         {/* Plain <a>, not <Link>: client-side nav here would trigger the
             @modal intercepting route for /tasks/[id], mistaking "new" for a
             task id. A full navigation bypasses interception entirely. */}
-        {session && session.user.role !== "STAFF" && (
+        {session && session.user.role !== "OFFICER" && (
           <a href="/tasks/new" className="btn-primary">
             + New Task
           </a>
@@ -122,7 +122,7 @@ export default function TasksPage() {
         <select className="input w-auto" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
           <option value="">Any manager</option>
           {users
-            ?.filter((u) => u.role === "MANAGER" || u.role === "ADMIN")
+            ?.filter((u) => u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN")
             .map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}

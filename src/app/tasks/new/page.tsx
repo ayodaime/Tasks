@@ -32,14 +32,16 @@ export default function NewTaskPage() {
   }, [session?.user.department]);
 
   useEffect(() => {
-    if (session && session.user.role === "STAFF") router.replace("/tasks");
+    if (session && session.user.role === "OFFICER") router.replace("/tasks");
   }, [session, router]);
 
   // "Their team": for a non-admin the task's department is fixed to their
   // own, so the assignee/manager lists only ever show people on that team.
   const teamMembers = users?.filter((u) => u.department === department);
   const teamManagers = users?.filter(
-    (u) => (u.role === "MANAGER" || u.role === "ADMIN") && (isAdmin || u.department === department)
+    (u) =>
+      (u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN") &&
+      (isAdmin || u.department === department)
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -69,7 +71,7 @@ export default function NewTaskPage() {
     window.location.href = `/tasks/${task.id}`;
   }
 
-  if (session?.user.role === "STAFF") return null;
+  if (session?.user.role === "OFFICER") return null;
 
   return (
     <div className="mx-auto max-w-2xl">
