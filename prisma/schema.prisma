@@ -11,16 +11,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// role: "STAFF" | "MANAGER" | "ADMIN"
+// role: "OFFICER" | "SUPERVISOR" | "MANAGER" | "ADMIN"
 // department: "ADMINISTRATION" | "CUSTOMER_SERVICE" | "DIGITAL_MARKETING" | "SEO" | "PR" | "HR" | null
 // (nullable so existing accounts from before this field existed aren't broken; an admin assigns one via Manage Staff)
+// hidden: excluded from every non-admin's view of the staff directory (assignee/
+// manager pickers, task filters) — admins still see hidden accounts everywhere,
+// including each other. Self-toggleable in Manage Staff, no lockout risk.
 model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
   passwordHash String
-  role         String   @default("STAFF")
+  role         String   @default("OFFICER")
   department   String?
+  hidden       Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   tasksCreated  Task[]       @relation("CreatedBy")

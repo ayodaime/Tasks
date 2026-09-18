@@ -4,6 +4,7 @@ export type UserSummary = {
   email: string;
   role?: string;
   department?: string | null;
+  hidden?: boolean;
 };
 
 export type TaskSummary = {

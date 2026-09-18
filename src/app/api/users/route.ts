@@ -7,8 +7,12 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // A user can mark their own account "hidden" (Manage Staff) to keep it out
+  // of everyone else's assignee/manager dropdowns and staff lists. Admins
+  // still see hidden accounts, including each other's.
   const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, department: true },
+    where: session.user.role === "ADMIN" ? {} : { hidden: false },
+    select: { id: true, name: true, email: true, role: true, department: true, hidden: true },
     orderBy: { name: "asc" },
   });
 

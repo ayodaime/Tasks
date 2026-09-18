@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!target) return NextResponse.json({ error: "User not found." }, { status: 404 });
 
   const body = await req.json().catch(() => null);
-  const data: { role?: string; department?: string | null } = {};
+  const data: { role?: string; department?: string | null; hidden?: boolean } = {};
 
   if ("role" in (body ?? {})) {
     if (id === session.user.id) {
@@ -35,6 +35,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     data.department = body.department;
   }
 
+  if ("hidden" in (body ?? {})) {
+    if (typeof body.hidden !== "boolean") {
+      return NextResponse.json({ error: "Invalid hidden value." }, { status: 400 });
+    }
+    data.hidden = body.hidden;
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
   }
@@ -42,7 +49,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const user = await prisma.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, email: true, role: true, department: true },
+    select: { id: true, name: true, email: true, role: true, department: true, hidden: true },
   });
 
   return NextResponse.json(user);

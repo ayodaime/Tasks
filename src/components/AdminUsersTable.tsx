@@ -17,7 +17,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function changeField(userId: string, field: "role" | "department", value: string) {
+  async function changeField(userId: string, field: "role" | "department" | "hidden", value: string | boolean) {
     setError(null);
     setSavingId(userId);
 
@@ -63,6 +63,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                   <th className="px-4 py-2">Email</th>
                   <th className="px-4 py-2">Role</th>
                   <th className="px-4 py-2">Department</th>
+                  <th className="px-4 py-2">Hidden</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -102,6 +103,17 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <label className="inline-flex items-center gap-2 text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={!!u.hidden}
+                          disabled={savingId === u.id}
+                          onChange={(e) => changeField(u.id, "hidden", e.target.checked)}
+                        />
+                        <span className="text-xs">{u.hidden ? "Hidden" : "Visible"}</span>
+                      </label>
                     </td>
                   </tr>
                 ))}

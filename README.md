@@ -155,6 +155,16 @@ that behind admin approval instead, an admin can always demote someone's role af
 in Manage Staff — worth knowing if that self-service model doesn't fit how your company
 wants to run this.
 
+### Hiding an account from staff pickers
+
+Any account can be marked "Hidden" in Manage Staff (a checkbox per person, editable by
+an admin for anyone, including their own account). A hidden account is left out of
+every non-admin's assignee/manager dropdowns and staff lists — admins still see it
+everywhere, hidden or not. This is separate from department-scoped task access above:
+hiding an account doesn't change who can see which tasks, it just keeps that person out
+of pickers other staff use day to day (useful for an owner/admin account that shouldn't
+be handed tasks like a regular team member).
+
 ```
 prisma/schema.prisma        Database schema (User, Task, Comment, Attachment)
 src/app/                    Pages (dashboard, tasks, login/register) and API routes
