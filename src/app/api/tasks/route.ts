@@ -84,15 +84,29 @@ export async function POST(req: Request) {
     department = session.user.department;
   }
 
-  // Non-admins can only hand a task to someone on their own team (department).
-  // Admins can assign across departments.
-  if (assigneeId && session.user.role !== "ADMIN") {
-    const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
-    if (!assignee || assignee.department !== department) {
-      return NextResponse.json(
-        { error: "You can only assign tasks to members of your own department." },
-        { status: 400 }
-      );
+  // Non-admins can only hand a task to someone on their own team (department),
+  // and can only name a manager in charge from that same team — since
+  // visibility is strictly by department now, a manager from elsewhere
+  // couldn't even see a task they were put in charge of. Admins are
+  // unrestricted on both.
+  if (session.user.role !== "ADMIN") {
+    if (assigneeId) {
+      const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
+      if (!assignee || assignee.department !== department) {
+        return NextResponse.json(
+          { error: "You can only assign tasks to members of your own department." },
+          { status: 400 }
+        );
+      }
+    }
+    if (managerId) {
+      const manager = await prisma.user.findUnique({ where: { id: managerId } });
+      if (!manager || manager.department !== department) {
+        return NextResponse.json(
+          { error: "You can only put a manager from your own department in charge." },
+          { status: 400 }
+        );
+      }
     }
   }
 

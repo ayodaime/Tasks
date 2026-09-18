@@ -170,20 +170,27 @@ export default function TaskDetailContent({
           </div>
           <div>
             <label className="label">Manager in charge</label>
-            <select
-              className="input"
-              value={task.manager?.id ?? ""}
-              onChange={(e) => updateField("managerId", e.target.value)}
-            >
-              <option value="">None</option>
-              {users
-                ?.filter((u) => u.role === "MANAGER" || u.role === "ADMIN")
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-            </select>
+            {canAssign ? (
+              <select
+                className="input"
+                value={task.manager?.id ?? ""}
+                onChange={(e) => updateField("managerId", e.target.value)}
+              >
+                <option value="">None</option>
+                {/* Non-admins can only put a manager from the same team (department) in charge. */}
+                {users
+                  ?.filter(
+                    (u) => (u.role === "MANAGER" || u.role === "ADMIN") && (isAdmin || u.department === task.department)
+                  )
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <p className="input flex items-center bg-slate-50 text-slate-600">{task.manager?.name ?? "None"}</p>
+            )}
           </div>
         </div>
 

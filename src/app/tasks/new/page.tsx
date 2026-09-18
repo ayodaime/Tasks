@@ -36,8 +36,11 @@ export default function NewTaskPage() {
   }, [session, router]);
 
   // "Their team": for a non-admin the task's department is fixed to their
-  // own, so the assignee list only ever shows people on that same team.
+  // own, so the assignee/manager lists only ever show people on that team.
   const teamMembers = users?.filter((u) => u.department === department);
+  const teamManagers = users?.filter(
+    (u) => (u.role === "MANAGER" || u.role === "ADMIN") && (isAdmin || u.department === department)
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -170,13 +173,11 @@ export default function NewTaskPage() {
             </label>
             <select id="manager" className="input" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
               <option value="">None</option>
-              {users
-                ?.filter((u) => u.role === "MANAGER" || u.role === "ADMIN")
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
+              {teamManagers?.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>

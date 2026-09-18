@@ -122,14 +122,16 @@ admin gives them a department.
 
 Every task belongs to a department (set by an admin when creating it, or automatically
 to the creator's own department for everyone else). Staff and managers only ever see
-tasks in their own department — this applies everywhere: the dashboard, the task board
-and list, and direct links, including file attachments. There's one exception: if you're
-personally the assignee, manager in charge, or creator of a task, you can always see it
-even if it's in a different department (so a cross-department assignment never locks
-someone out of a task they were actually given). Admins are unrestricted and see every
-department; they also get a Department filter on the task board and a Department field
-when creating a task or editing an existing one. A task with no department yet
-("Unclassified") is only visible to admins until one sets its department.
+tasks in their own department, full stop — this applies everywhere: the dashboard, the
+task board and list, and direct links, including file attachments and comments. There's
+no exception for being personally the assignee or manager in charge of a task outside
+your department; that visibility is admin-only. Because of this, a manager can only
+assign a task (or name a manager in charge) to someone in their own department in the
+first place — only admins can place a task with someone outside it. Admins are
+unrestricted and see every department; they also get a Department filter on the task
+board and a Department field when creating a task or editing an existing one. A task
+with no department yet ("Unclassified") is only visible to admins until one sets its
+department.
 
 ### Who can create and assign tasks
 
@@ -137,8 +139,8 @@ Only `MANAGER` and `ADMIN` accounts can create tasks or assign them (the "New Ta
 button and the Assignee field's dropdown are hidden from `STAFF` entirely, and the API
 rejects both if attempted directly). Staff can still update the status/priority of a
 task they're on, post progress comments, and upload attachments — they just don't create
-or hand out new tasks. A manager can only assign a task to someone on their own team
-(department); admins can assign across any department.
+or hand out new tasks. A manager can only assign a task — or name a manager in charge —
+to someone on their own team (department); admins can assign across any department.
 
 ```
 prisma/schema.prisma        Database schema (User, Task, Comment, Attachment)

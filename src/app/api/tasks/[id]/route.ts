@@ -95,7 +95,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     data.assigneeId = newAssigneeId;
   }
-  if ("managerId" in (body ?? {})) data.managerId = body.managerId || null;
+  if ("managerId" in (body ?? {})) {
+    // Naming a manager in charge is a manager/admin decision too.
+    if (session.user.role === "STAFF") {
+      return NextResponse.json({ error: "Only managers and admins can set who's in charge." }, { status: 403 });
+    }
+    const newManagerId = body.managerId || null;
+    // A non-admin manager from another department couldn't even see this
+    // task under the strict department-only visibility rule, so they can
+    // only be named manager in charge of tasks in their own department.
+    if (newManagerId && session.user.role !== "ADMIN") {
+      const manager = await prisma.user.findUnique({ where: { id: newManagerId } });
+      if (!manager || manager.department !== existing.department) {
+        return NextResponse.json(
+          { error: "You can only put a manager from your own department in charge." },
+          { status: 400 }
+        );
+      }
+    }
+    data.managerId = newManagerId;
+  }
   if ("dueDate" in (body ?? {})) data.dueDate = body.dueDate ? new Date(body.dueDate) : null;
 
   const task = await prisma.task.update({
