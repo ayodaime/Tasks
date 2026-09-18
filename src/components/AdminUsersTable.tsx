@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { DEPARTMENTS, DEPARTMENT_LABELS, USER_ROLES, ROLE_LABELS, type Department } from "@/lib/constants";
+import {
+  DEPARTMENTS,
+  DEPARTMENT_LABELS,
+  DIGITAL_MARKETING_TEAMS,
+  DIGITAL_MARKETING_TEAM_LABELS,
+  USER_ROLES,
+  ROLE_LABELS,
+  type Department,
+} from "@/lib/constants";
 import type { UserSummary } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -17,25 +25,45 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function changeField(userId: string, field: "role" | "department" | "hidden", value: string | boolean) {
+  async function submitUpdate(userId: string, data: Record<string, unknown>) {
     setError(null);
     setSavingId(userId);
 
     const res = await fetch(`/api/users/${userId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [field]: value }),
+      body: JSON.stringify(data),
     });
 
     setSavingId(null);
 
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || `Could not update ${field}.`);
+      const body = await res.json().catch(() => ({}));
+      setError(body.error || "Could not update staff member.");
       return;
     }
 
     mutate();
+  }
+
+  function changeField(userId: string, field: "role" | "department" | "hidden", value: string | boolean) {
+    return submitUpdate(userId, { [field]: value });
+  }
+
+  function changeDepartment(u: UserSummary, newDept: string) {
+    // Moving someone into Digital Marketing needs a team too, so default them
+    // to Design Team — they (or an admin) can adjust it with the checkboxes below.
+    if (newDept === "DIGITAL_MARKETING") {
+      return submitUpdate(u.id, { department: newDept, subteams: ["DESIGN_TEAM"] });
+    }
+    return submitUpdate(u.id, { department: newDept });
+  }
+
+  function toggleSubteam(u: UserSummary, team: string) {
+    const current = u.subteams ?? [];
+    const next = current.includes(team) ? current.filter((t) => t !== team) : [...current, team];
+    if (next.length === 0) return; // must stay on at least one team
+    return submitUpdate(u.id, { subteams: next });
   }
 
   if (isLoading) return <p className="text-sm text-slate-500">Loading...</p>;
@@ -63,6 +91,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                   <th className="px-4 py-2">Email</th>
                   <th className="px-4 py-2">Role</th>
                   <th className="px-4 py-2">Department</th>
+                  {group.key === "DIGITAL_MARKETING" && <th className="px-4 py-2">Team(s)</th>}
                   <th className="px-4 py-2">Hidden</th>
                 </tr>
               </thead>
@@ -94,7 +123,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                         className="input w-auto"
                         value={u.department ?? ""}
                         disabled={savingId === u.id}
-                        onChange={(e) => changeField(u.id, "department", e.target.value)}
+                        onChange={(e) => changeDepartment(u, e.target.value)}
                       >
                         {!u.department && <option value="">Not set</option>}
                         {DEPARTMENTS.map((d) => (
@@ -104,6 +133,23 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                         ))}
                       </select>
                     </td>
+                    {group.key === "DIGITAL_MARKETING" && (
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          {DIGITAL_MARKETING_TEAMS.map((t) => (
+                            <label key={t} className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                              <input
+                                type="checkbox"
+                                checked={(u.subteams ?? []).includes(t)}
+                                disabled={savingId === u.id}
+                                onChange={() => toggleSubteam(u, t)}
+                              />
+                              {DIGITAL_MARKETING_TEAM_LABELS[t]}
+                            </label>
+                          ))}
+                        </div>
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <label className="inline-flex items-center gap-2 text-slate-600">
                         <input

@@ -23,7 +23,10 @@ export async function GET(
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
-  const task = await prisma.task.findUnique({ where: { id: safeTaskId } });
+  const task = await prisma.task.findUnique({
+    where: { id: safeTaskId },
+    include: { groups: { select: { group: true } } },
+  });
   if (!task || !canAccessTask(task, session.user)) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }

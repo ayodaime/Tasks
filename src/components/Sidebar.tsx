@@ -6,7 +6,14 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Avatar from "@/components/Avatar";
 import SignOutButton from "@/components/SignOutButton";
-import { DEPARTMENT_LABELS, ROLE_LABELS, type Department, type UserRole } from "@/lib/constants";
+import {
+  DEPARTMENT_LABELS,
+  DIGITAL_MARKETING_TEAM_LABELS,
+  ROLE_LABELS,
+  type Department,
+  type DigitalMarketingTeam,
+  type UserRole,
+} from "@/lib/constants";
 
 const BASE_LINKS = [
   { href: "/", label: "Dashboard" },
@@ -69,7 +76,13 @@ export default function Sidebar() {
             <p className="truncate text-sm font-medium text-slate-800">{session.user?.name}</p>
             <p className="truncate text-xs text-slate-400">
               {ROLE_LABELS[session.user.role as UserRole] ?? session.user.role}
-              {session.user.department && ` · ${DEPARTMENT_LABELS[session.user.department as Department] ?? session.user.department}`}
+              {session.user.department &&
+                ` · ${DEPARTMENT_LABELS[session.user.department as Department] ?? session.user.department}`}
+              {session.user.department === "DIGITAL_MARKETING" &&
+                session.user.subteams.length > 0 &&
+                ` (${session.user.subteams
+                  .map((t) => DIGITAL_MARKETING_TEAM_LABELS[t as DigitalMarketingTeam] ?? t)
+                  .join(", ")})`}
             </p>
           </div>
         </div>

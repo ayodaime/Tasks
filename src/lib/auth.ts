@@ -19,7 +19,7 @@ export const authOptions: AuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         const email = credentials.email.trim().toLowerCase();
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({ where: { email }, include: { subteams: true } });
         if (!user) return null;
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
@@ -31,6 +31,7 @@ export const authOptions: AuthOptions = {
           email: user.email,
           role: user.role,
           department: user.department,
+          subteams: user.subteams.map((s) => s.team),
         };
       },
     }),
@@ -41,6 +42,7 @@ export const authOptions: AuthOptions = {
         token.id = (user as any).id;
         token.role = (user as any).role;
         token.department = (user as any).department;
+        token.subteams = (user as any).subteams;
       }
       return token;
     },
@@ -49,6 +51,7 @@ export const authOptions: AuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
         (session.user as any).department = token.department;
+        (session.user as any).subteams = token.subteams ?? [];
       }
       return session;
     },

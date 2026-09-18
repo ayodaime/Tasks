@@ -12,9 +12,17 @@ export async function GET() {
   // still see hidden accounts, including each other's.
   const users = await prisma.user.findMany({
     where: session.user.role === "ADMIN" ? {} : { hidden: false },
-    select: { id: true, name: true, email: true, role: true, department: true, hidden: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      department: true,
+      hidden: true,
+      subteams: { select: { team: true } },
+    },
     orderBy: { name: "asc" },
   });
 
-  return NextResponse.json(users);
+  return NextResponse.json(users.map((u) => ({ ...u, subteams: u.subteams.map((s) => s.team) })));
 }

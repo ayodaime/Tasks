@@ -2,15 +2,21 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { DEPARTMENTS, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
+import { TASK_GROUPS, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
 import { taskAccessWhere } from "@/lib/taskAccess";
+import { userGroups, groupsOverlap } from "@/lib/groups";
 
 const taskListInclude = {
   createdBy: { select: { id: true, name: true, email: true } },
   assignee: { select: { id: true, name: true, email: true } },
   manager: { select: { id: true, name: true, email: true } },
+  groups: { select: { group: true } },
   _count: { select: { comments: true, attachments: true } },
 } as const;
+
+function serializeTask<T extends { groups: { group: string }[] }>(task: T) {
+  return { ...task, groups: task.groups.map((g) => g.group) };
+}
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -21,17 +27,17 @@ export async function GET(req: Request) {
   const priority = searchParams.get("priority");
   const assigneeId = searchParams.get("assigneeId");
   const managerId = searchParams.get("managerId");
-  const department = searchParams.get("department");
+  const group = searchParams.get("group");
 
   const where: Record<string, unknown> = { ...taskAccessWhere(session.user) };
   if (status && (TASK_STATUSES as readonly string[]).includes(status)) where.status = status;
   if (priority && (TASK_PRIORITIES as readonly string[]).includes(priority)) where.priority = priority;
   if (assigneeId) where.assigneeId = assigneeId;
   if (managerId) where.managerId = managerId;
-  // Only admins are unrestricted, so a department filter only makes sense
-  // (and is only exposed in the UI) for them; non-admins are already scoped.
-  if (department && session.user.role === "ADMIN" && (DEPARTMENTS as readonly string[]).includes(department)) {
-    where.department = department;
+  // Only admins are unrestricted, so a team filter only makes sense (and is
+  // only exposed in the UI) for them; non-admins are already scoped.
+  if (group && session.user.role === "ADMIN" && (TASK_GROUPS as readonly string[]).includes(group)) {
+    where.groups = { some: { group } };
   }
 
   const tasks = await prisma.task.findMany({
@@ -40,7 +46,7 @@ export async function GET(req: Request) {
     orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
   });
 
-  return NextResponse.json(tasks);
+  return NextResponse.json(tasks.map(serializeTask));
 }
 
 export async function POST(req: Request) {
@@ -65,45 +71,49 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid priority." }, { status: 400 });
   }
 
-  // Admins place a task in any department; everyone else's tasks are
-  // implicitly scoped to their own department, so it's never editable here.
-  let department: string;
+  const rawGroups: unknown[] = Array.isArray(body?.groups) ? body.groups : [];
+  const requestedGroups: string[] = [...new Set(rawGroups.filter((g): g is string => typeof g === "string"))];
+  if (!requestedGroups.every((g) => (TASK_GROUPS as readonly string[]).includes(g))) {
+    return NextResponse.json({ error: "Invalid team." }, { status: 400 });
+  }
+
+  let groups: string[];
   if (session.user.role === "ADMIN") {
-    const requested = typeof body?.department === "string" ? body.department : "";
-    if (!(DEPARTMENTS as readonly string[]).includes(requested)) {
-      return NextResponse.json({ error: "Select a valid department." }, { status: 400 });
-    }
-    department = requested;
+    groups = requestedGroups;
   } else {
-    if (!session.user.department) {
+    // Non-admins can only tag a task with team(s) they're actually on.
+    const ownGroups = userGroups(session.user);
+    if (ownGroups.length === 0) {
       return NextResponse.json(
-        { error: "You don't have a department assigned yet. Ask an admin to set one before creating tasks." },
+        { error: "You don't have a team assigned yet. Ask an admin to set one before creating tasks." },
         { status: 400 }
       );
     }
-    department = session.user.department;
+    if (requestedGroups.length === 0 || !requestedGroups.every((g) => ownGroups.includes(g))) {
+      return NextResponse.json({ error: "Select only your own team(s)." }, { status: 400 });
+    }
+    groups = requestedGroups;
   }
 
-  // Non-admins can only hand a task to someone on their own team (department),
-  // and can only name a manager in charge from that same team — since
-  // visibility is strictly by department now, a manager from elsewhere
-  // couldn't even see a task they were put in charge of. Admins are
-  // unrestricted on both.
+  // Non-admins can only hand a task to someone who shares one of its teams,
+  // and can only name a manager in charge who shares one too — since
+  // visibility is strictly by team, someone with no overlap couldn't even
+  // see a task they were put in charge of. Admins are unrestricted on both.
   if (session.user.role !== "ADMIN") {
     if (assigneeId) {
-      const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
-      if (!assignee || assignee.department !== department) {
+      const assignee = await prisma.user.findUnique({ where: { id: assigneeId }, include: { subteams: true } });
+      if (!assignee || !groupsOverlap(userGroups({ department: assignee.department, subteams: assignee.subteams.map((s) => s.team) }), groups)) {
         return NextResponse.json(
-          { error: "You can only assign tasks to members of your own department." },
+          { error: "You can only assign tasks to members of your own team." },
           { status: 400 }
         );
       }
     }
     if (managerId) {
-      const manager = await prisma.user.findUnique({ where: { id: managerId } });
-      if (!manager || manager.department !== department) {
+      const manager = await prisma.user.findUnique({ where: { id: managerId }, include: { subteams: true } });
+      if (!manager || !groupsOverlap(userGroups({ department: manager.department, subteams: manager.subteams.map((s) => s.team) }), groups)) {
         return NextResponse.json(
-          { error: "You can only put a manager from your own department in charge." },
+          { error: "You can only put a manager from your own team in charge." },
           { status: 400 }
         );
       }
@@ -115,14 +125,14 @@ export async function POST(req: Request) {
       title,
       description,
       priority,
-      department,
       assigneeId,
       managerId,
       dueDate,
       createdById: session.user.id,
+      groups: { create: groups.map((group) => ({ group })) },
     },
     include: taskListInclude,
   });
 
-  return NextResponse.json(task, { status: 201 });
+  return NextResponse.json(serializeTask(task), { status: 201 });
 }

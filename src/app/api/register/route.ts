@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { DEPARTMENTS, REGISTRATION_ROLES } from "@/lib/constants";
+import { DEPARTMENTS, DIGITAL_MARKETING_TEAMS, REGISTRATION_ROLES } from "@/lib/constants";
 
 function isAllowedDomain(email: string): boolean {
   const raw = process.env.ALLOWED_EMAIL_DOMAINS?.trim();
@@ -24,6 +24,9 @@ export async function POST(req: Request) {
   const password = typeof body?.password === "string" ? body.password : "";
   const department = typeof body?.department === "string" ? body.department : "";
   const requestedRole = typeof body?.role === "string" ? body.role : "";
+  const subteams: string[] = Array.isArray(body?.subteams)
+    ? body.subteams.filter((t: unknown) => typeof t === "string")
+    : [];
 
   if (!name || !email || !password || !department || !requestedRole) {
     return NextResponse.json(
@@ -34,6 +37,14 @@ export async function POST(req: Request) {
 
   if (!(DEPARTMENTS as readonly string[]).includes(department)) {
     return NextResponse.json({ error: "Select a valid department." }, { status: 400 });
+  }
+
+  // Digital Marketing has no single team of its own — pick one or more
+  // sub-teams instead. Everyone else has no sub-teams to pick.
+  if (department === "DIGITAL_MARKETING") {
+    if (subteams.length === 0 || !subteams.every((t) => (DIGITAL_MARKETING_TEAMS as readonly string[]).includes(t))) {
+      return NextResponse.json({ error: "Select at least one Digital Marketing team." }, { status: 400 });
+    }
   }
 
   // ADMIN is granted, never self-selected (except automatically for the
@@ -73,6 +84,10 @@ export async function POST(req: Request) {
       department,
       // First person to register becomes admin so someone can manage the team.
       role: userCount === 0 ? "ADMIN" : requestedRole,
+      subteams:
+        department === "DIGITAL_MARKETING"
+          ? { create: [...new Set(subteams)].map((team) => ({ team })) }
+          : undefined,
     },
   });
 

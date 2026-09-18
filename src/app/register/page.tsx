@@ -4,7 +4,14 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { DEPARTMENTS, DEPARTMENT_LABELS, REGISTRATION_ROLES, ROLE_LABELS } from "@/lib/constants";
+import {
+  DEPARTMENTS,
+  DEPARTMENT_LABELS,
+  DIGITAL_MARKETING_TEAMS,
+  DIGITAL_MARKETING_TEAM_LABELS,
+  REGISTRATION_ROLES,
+  ROLE_LABELS,
+} from "@/lib/constants";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -12,9 +19,14 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [department, setDepartment] = useState("");
+  const [subteams, setSubteams] = useState<string[]>([]);
   const [role, setRole] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function toggleSubteam(team: string) {
+    setSubteams((current) => (current.includes(team) ? current.filter((t) => t !== team) : [...current, team]));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,7 +36,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, department, role }),
+      body: JSON.stringify({ name, email, password, department, subteams, role }),
     });
 
     if (!res.ok) {
@@ -103,7 +115,10 @@ export default function RegisterPage() {
               required
               className="input"
               value={department}
-              onChange={(e) => setDepartment(e.target.value)}
+              onChange={(e) => {
+                setDepartment(e.target.value);
+                setSubteams([]);
+              }}
             >
               <option value="" disabled>
                 Select your department
@@ -115,6 +130,24 @@ export default function RegisterPage() {
               ))}
             </select>
           </div>
+          {department === "DIGITAL_MARKETING" && (
+            <div>
+              <label className="label">Which team(s) are you on?</label>
+              <div className="space-y-1.5 rounded-md border border-slate-300 p-3">
+                {DIGITAL_MARKETING_TEAMS.map((t) => (
+                  <label key={t} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={subteams.includes(t)}
+                      onChange={() => toggleSubteam(t)}
+                    />
+                    {DIGITAL_MARKETING_TEAM_LABELS[t]}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-slate-400">Select at least one. You can be on more than one team.</p>
+            </div>
+          )}
           <div>
             <label className="label" htmlFor="role">
               Role
@@ -133,7 +166,11 @@ export default function RegisterPage() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <button type="submit" disabled={loading} className="btn-primary w-full">
+          <button
+            type="submit"
+            disabled={loading || (department === "DIGITAL_MARKETING" && subteams.length === 0)}
+            className="btn-primary w-full"
+          >
             {loading ? "Creating account..." : "Create account"}
           </button>
         </form>

@@ -1,21 +1,26 @@
-// Task visibility is strictly by department for everyone except admins: a
-// non-admin sees a task only if it belongs to their own department, full
-// stop — even being the assignee, manager in charge, or creator of a task
-// in another department doesn't grant access. Only admins see across teams.
+// Task visibility is strictly by group for everyone except admins: a
+// non-admin sees a task only if it shares at least one group with them
+// (their department, or their Digital Marketing sub-team(s)) — even being
+// the assignee, manager in charge, or creator of a task with no shared group
+// doesn't grant access. Only admins see across every team.
+import { userGroups } from "@/lib/groups";
 
-type SessionUser = { id: string; role: string; department: string | null };
+type SessionUser = { id: string; role: string; department: string | null; subteams?: string[] | null };
 
 type TaskLike = {
-  department: string | null;
+  groups: { group: string }[];
 };
 
 export function taskAccessWhere(user: SessionUser) {
   if (user.role === "ADMIN") return {};
-  // No department yet means no tasks are visible until an admin assigns one.
-  return { department: user.department ?? "__none__" };
+  const groups = userGroups(user);
+  // No group yet means no tasks are visible until an admin assigns one.
+  if (groups.length === 0) return { id: "__none__" };
+  return { groups: { some: { group: { in: groups } } } };
 }
 
 export function canAccessTask(task: TaskLike, user: SessionUser): boolean {
   if (user.role === "ADMIN") return true;
-  return !!user.department && task.department === user.department;
+  const groups = userGroups(user);
+  return task.groups.some((g) => groups.includes(g.group));
 }

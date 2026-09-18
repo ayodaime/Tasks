@@ -9,10 +9,11 @@ import {
   TASK_PRIORITIES,
   STATUS_LABELS,
   PRIORITY_LABELS,
-  DEPARTMENTS,
-  DEPARTMENT_LABELS,
-  type Department,
+  TASK_GROUPS,
+  TASK_GROUP_LABELS,
+  type TaskGroupCode,
 } from "@/lib/constants";
+import { userGroups, groupsOverlap } from "@/lib/groups";
 import type { TaskDetail, UserSummary } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -41,13 +42,19 @@ export default function TaskDetailContent({
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  async function updateField(field: string, value: string) {
+  async function updateField(field: string, value: unknown) {
     await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [field]: value }),
     });
     mutate();
+  }
+
+  function toggleGroup(g: string) {
+    if (!task) return;
+    const next = task.groups.includes(g) ? task.groups.filter((x) => x !== g) : [...task.groups, g];
+    updateField("groups", next);
   }
 
   async function submitComment(e: React.FormEvent) {
@@ -102,28 +109,27 @@ export default function TaskDetailContent({
 
         {task.description && <p className="mt-4 whitespace-pre-wrap text-slate-700">{task.description}</p>}
 
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
-          <div>
-            <label className="label">Department</label>
-            {isAdmin ? (
-              <select
-                className="input"
-                value={task.department ?? ""}
-                onChange={(e) => updateField("department", e.target.value)}
-              >
-                {!task.department && <option value="">Unclassified</option>}
-                {DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>
-                    {DEPARTMENT_LABELS[d]}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className="input flex items-center bg-slate-50 text-slate-600">
-                {task.department ? DEPARTMENT_LABELS[task.department as Department] ?? task.department : "Unclassified"}
-              </p>
-            )}
-          </div>
+        <div className="mt-6">
+          <label className="label">Team(s)</label>
+          {isAdmin ? (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md border border-slate-300 p-3 sm:grid-cols-3">
+              {TASK_GROUPS.map((g) => (
+                <label key={g} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={task.groups.includes(g)} onChange={() => toggleGroup(g)} />
+                  {TASK_GROUP_LABELS[g]}
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="input flex items-center bg-slate-50 text-slate-600">
+              {task.groups.length > 0
+                ? task.groups.map((g) => TASK_GROUP_LABELS[g as TaskGroupCode] ?? g).join(", ")
+                : "Unclassified"}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
             <label className="label">Status</label>
             <select className="input" value={task.status} onChange={(e) => updateField("status", e.target.value)}>
@@ -153,9 +159,9 @@ export default function TaskDetailContent({
                 onChange={(e) => updateField("assigneeId", e.target.value)}
               >
                 <option value="">Unassigned</option>
-                {/* Non-admins can only hand this task to someone on the same team (department). */}
+                {/* Non-admins can only hand this task to someone who shares one of its teams. */}
                 {users
-                  ?.filter((u) => isAdmin || u.department === task.department)
+                  ?.filter((u) => isAdmin || groupsOverlap(userGroups(u), task.groups))
                   .map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
@@ -177,12 +183,12 @@ export default function TaskDetailContent({
                 onChange={(e) => updateField("managerId", e.target.value)}
               >
                 <option value="">None</option>
-                {/* Non-admins can only put a manager from the same team (department) in charge. */}
+                {/* Non-admins can only put a manager who shares one of its teams in charge. */}
                 {users
                   ?.filter(
                     (u) =>
                       (u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN") &&
-                      (isAdmin || u.department === task.department)
+                      (isAdmin || groupsOverlap(userGroups(u), task.groups))
                   )
                   .map((u) => (
                     <option key={u.id} value={u.id}>

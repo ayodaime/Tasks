@@ -42,6 +42,51 @@ export const DEPARTMENT_LABELS: Record<Department, string> = {
   HR: "HR",
 };
 
+// Digital Marketing has its own sub-teams; a Digital Marketing person belongs
+// to one or more of these instead of the department as a whole, and can be on
+// more than one (e.g. Online Branding + Offline Branding).
+export const DIGITAL_MARKETING_TEAMS = [
+  "DESIGN_TEAM",
+  "ONLINE_BRANDING",
+  "OFFLINE_BRANDING",
+  "SOCIAL_MEDIA_TEAM",
+] as const;
+export type DigitalMarketingTeam = (typeof DIGITAL_MARKETING_TEAMS)[number];
+
+export const DIGITAL_MARKETING_TEAM_LABELS: Record<DigitalMarketingTeam, string> = {
+  DESIGN_TEAM: "Design Team",
+  ONLINE_BRANDING: "Online Branding",
+  OFFLINE_BRANDING: "Offline Branding",
+  SOCIAL_MEDIA_TEAM: "Social Media",
+};
+
+// The actual scoping units used for task tagging and access control: every
+// non-Digital-Marketing department, plus the 4 Digital Marketing sub-teams —
+// never "DIGITAL_MARKETING" itself, since a Digital Marketing person or task
+// is always scoped by specific sub-team(s). A task can be tagged with more
+// than one of these at once.
+export const TASK_GROUPS = [
+  "ADMINISTRATION",
+  "CUSTOMER_SERVICE",
+  "SEO",
+  "PR",
+  "HR",
+  ...DIGITAL_MARKETING_TEAMS,
+] as const;
+export type TaskGroupCode = (typeof TASK_GROUPS)[number];
+
+export const TASK_GROUP_LABELS: Record<TaskGroupCode, string> = {
+  ADMINISTRATION: "Admin",
+  CUSTOMER_SERVICE: "Customer Service",
+  SEO: "SEO",
+  PR: "PR",
+  HR: "HR",
+  DESIGN_TEAM: "Digital Marketing – Design Team",
+  ONLINE_BRANDING: "Digital Marketing – Online Branding",
+  OFFLINE_BRANDING: "Digital Marketing – Offline Branding",
+  SOCIAL_MEDIA_TEAM: "Digital Marketing – Social Media",
+};
+
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "To Do",
   IN_PROGRESS: "In Progress",

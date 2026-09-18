@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { TASK_PRIORITIES, PRIORITY_LABELS, DEPARTMENTS, DEPARTMENT_LABELS, type Department } from "@/lib/constants";
+import {
+  TASK_PRIORITIES,
+  PRIORITY_LABELS,
+  TASK_GROUPS,
+  TASK_GROUP_LABELS,
+  type TaskGroupCode,
+} from "@/lib/constants";
+import { userGroups, groupsOverlap } from "@/lib/groups";
 import type { UserSummary } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -18,30 +25,43 @@ export default function NewTaskPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
-  const [department, setDepartment] = useState<string>(
-    (session?.user.department as Department) ?? DEPARTMENTS[0]
-  );
+  const [groups, setGroups] = useState<string[]>([]);
   const [assigneeId, setAssigneeId] = useState("");
   const [managerId, setManagerId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const ownGroups = session ? userGroups(session.user) : [];
+  // Most people (anyone outside Digital Marketing) have exactly one team, so
+  // their task is implicitly tagged with it and there's nothing to pick.
+  // Digital Marketing people with more than one team choose among their own.
+  const pickableOwnGroups = ownGroups.length > 1;
+
   useEffect(() => {
-    if (session?.user.department) setDepartment(session.user.department);
-  }, [session?.user.department]);
+    if (!session || isAdmin) return;
+    if (!pickableOwnGroups) setGroups(ownGroups);
+    // Default a multi-team Digital Marketing person to all their own teams;
+    // they can narrow it with the checkboxes below.
+    else setGroups((current) => (current.length === 0 ? ownGroups : current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user.department, JSON.stringify(session?.user.subteams)]);
 
   useEffect(() => {
     if (session && session.user.role === "OFFICER") router.replace("/tasks");
   }, [session, router]);
 
-  // "Their team": for a non-admin the task's department is fixed to their
-  // own, so the assignee/manager lists only ever show people on that team.
-  const teamMembers = users?.filter((u) => u.department === department);
+  function toggleGroup(g: string) {
+    setGroups((current) => (current.includes(g) ? current.filter((x) => x !== g) : [...current, g]));
+  }
+
+  // "Their team": the assignee/manager lists only show people who share at
+  // least one of the task's selected teams.
+  const teamMembers = users?.filter((u) => groupsOverlap(userGroups(u), groups));
   const teamManagers = users?.filter(
     (u) =>
       (u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN") &&
-      (isAdmin || u.department === department)
+      (isAdmin || groupsOverlap(userGroups(u), groups))
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -52,7 +72,7 @@ export default function NewTaskPage() {
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, priority, department, assigneeId, managerId, dueDate }),
+      body: JSON.stringify({ title, description, priority, groups, assigneeId, managerId, dueDate }),
     });
 
     setLoading(false);
@@ -98,30 +118,28 @@ export default function NewTaskPage() {
           />
         </div>
 
-        {isAdmin && (
+        {(isAdmin || pickableOwnGroups) && (
           <div>
-            <label className="label" htmlFor="department">
-              Department
-            </label>
-            <select
-              id="department"
-              className="input"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-            >
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>
-                  {DEPARTMENT_LABELS[d]}
-                </option>
+            <label className="label">Team(s)</label>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md border border-slate-300 p-3 sm:grid-cols-3">
+              {(isAdmin ? TASK_GROUPS : (ownGroups as TaskGroupCode[])).map((g) => (
+                <label key={g} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={groups.includes(g)} onChange={() => toggleGroup(g)} />
+                  {TASK_GROUP_LABELS[g as TaskGroupCode]}
+                </label>
               ))}
-            </select>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              {isAdmin
+                ? "Select one or more teams. No team selected means unclassified (admin-only)."
+                : "Select at least one of your own teams."}
+            </p>
           </div>
         )}
 
-        {!isAdmin && session && !session.user.department && (
+        {!isAdmin && !pickableOwnGroups && ownGroups.length === 0 && (
           <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            You don&apos;t have a department assigned yet. Ask an admin to set one in Manage Staff before
-            creating tasks.
+            You don&apos;t have a team assigned yet. Ask an admin to set one in Manage Staff before creating tasks.
           </p>
         )}
 
@@ -165,9 +183,7 @@ export default function NewTaskPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-400">
-              Only staff in the {DEPARTMENT_LABELS[department as Department] ?? "selected"} department are shown.
-            </p>
+            <p className="mt-1 text-xs text-slate-400">Only staff on the selected team(s) are shown.</p>
           </div>
           <div>
             <label className="label" htmlFor="manager">
@@ -192,7 +208,7 @@ export default function NewTaskPage() {
           </button>
           <button
             type="submit"
-            disabled={loading || (!isAdmin && !!session && !session.user.department)}
+            disabled={loading || (!isAdmin && groups.length === 0)}
             className="btn-primary"
           >
             {loading ? "Creating..." : "Create task"}

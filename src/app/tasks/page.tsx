@@ -12,8 +12,8 @@ import {
   TASK_STATUSES,
   STATUS_LABELS,
   PRIORITY_LABELS,
-  DEPARTMENTS,
-  DEPARTMENT_LABELS,
+  TASK_GROUPS,
+  TASK_GROUP_LABELS,
 } from "@/lib/constants";
 import type { TaskSummary, UserSummary } from "@/lib/types";
 
@@ -27,7 +27,7 @@ export default function TasksPage() {
   const [priority, setPriority] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [managerId, setManagerId] = useState("");
-  const [department, setDepartment] = useState("");
+  const [group, setGroup] = useState("");
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -35,9 +35,9 @@ export default function TasksPage() {
     if (priority) params.set("priority", priority);
     if (assigneeId) params.set("assigneeId", assigneeId);
     if (managerId) params.set("managerId", managerId);
-    if (department) params.set("department", department);
+    if (group) params.set("group", group);
     return params.toString();
-  }, [status, priority, assigneeId, managerId, department]);
+  }, [status, priority, assigneeId, managerId, group]);
 
   const { data: tasks, isLoading, mutate } = useSWR<TaskSummary[]>(`/api/tasks?${query}`, fetcher);
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
@@ -86,11 +86,11 @@ export default function TasksPage() {
         </div>
 
         {isAdmin && (
-          <select className="input w-auto" value={department} onChange={(e) => setDepartment(e.target.value)}>
-            <option value="">All departments</option>
-            {DEPARTMENTS.map((d) => (
-              <option key={d} value={d}>
-                {DEPARTMENT_LABELS[d]}
+          <select className="input w-auto" value={group} onChange={(e) => setGroup(e.target.value)}>
+            <option value="">All teams</option>
+            {TASK_GROUPS.map((g) => (
+              <option key={g} value={g}>
+                {TASK_GROUP_LABELS[g]}
               </option>
             ))}
           </select>
@@ -129,7 +129,7 @@ export default function TasksPage() {
               </option>
             ))}
         </select>
-        {(status || priority || assigneeId || managerId || department) && (
+        {(status || priority || assigneeId || managerId || group) && (
           <button
             className="btn-secondary"
             onClick={() => {
@@ -137,7 +137,7 @@ export default function TasksPage() {
               setPriority("");
               setAssigneeId("");
               setManagerId("");
-              setDepartment("");
+              setGroup("");
             }}
           >
             Clear filters

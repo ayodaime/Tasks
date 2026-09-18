@@ -4,6 +4,7 @@ export type UserSummary = {
   email: string;
   role?: string;
   department?: string | null;
+  subteams?: string[];
   hidden?: boolean;
 };
 
@@ -13,7 +14,7 @@ export type TaskSummary = {
   description: string;
   status: string;
   priority: string;
-  department: string | null;
+  groups: string[];
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;

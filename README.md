@@ -118,20 +118,33 @@ themselves out), though they can change their own department.
 Accounts created before this field existed show up under "Not yet assigned" until an
 admin gives them a department.
 
-### Department-scoped task access
+### Digital Marketing sub-teams
 
-Every task belongs to a department (set by an admin when creating it, or automatically
-to the creator's own department for everyone else). Staff and managers only ever see
-tasks in their own department, full stop — this applies everywhere: the dashboard, the
-task board and list, and direct links, including file attachments and comments. There's
-no exception for being personally the assignee or manager in charge of a task outside
-your department; that visibility is admin-only. Because of this, a manager can only
-assign a task (or name a manager in charge) to someone in their own department in the
-first place — only admins can place a task with someone outside it. Admins are
-unrestricted and see every department; they also get a Department filter on the task
-board and a Department field when creating a task or editing an existing one. A task
-with no department yet ("Unclassified") is only visible to admins until one sets its
-department.
+Digital Marketing has no single team of its own — instead, anyone registering (or
+being moved) into Digital Marketing picks one or more of its 4 sub-teams: Design Team,
+Online Branding, Offline Branding, and Social Media. Unlike every other department,
+where a person has exactly one team, a Digital Marketing person can be on more than
+one sub-team at once (e.g. both Online Branding and Offline Branding), set via
+checkboxes at registration or in Manage Staff. Their actual scoping unit for task
+access is whichever sub-team(s) they're on, not "Digital Marketing" as a whole.
+
+### Team-scoped task access
+
+Every task is tagged with one or more teams — a task can span more than one at once
+(e.g. a Design Team + Online Branding task), set by whoever creates or edits it. For
+everyone outside Digital Marketing, "team" just means their department; for Digital
+Marketing people it means their sub-team(s) (see above). A non-admin sees a task only
+if it shares at least one team with them, full stop — this applies everywhere: the
+dashboard, the task board and list, and direct links, including file attachments and
+comments. There's no exception for being personally the assignee or manager in charge
+of a task with no shared team; that visibility is admin-only. Because of this, a
+manager or supervisor can only tag a new task with team(s) they're on themselves, and
+can only assign it (or name a manager in charge) to someone who shares one of those
+teams — only admins can place a task with someone who shares none of its teams, or tag
+a task across teams the creator isn't on. Admins are unrestricted and see every team;
+they also get a Team filter on the task board and can freely retag an existing task's
+team(s). A task with no team yet ("Unclassified") is only visible to admins until one
+tags it.
 
 ### Roles
 
@@ -145,8 +158,8 @@ Only `SUPERVISOR`, `MANAGER`, and `ADMIN` accounts can create tasks or assign th
 and the API rejects both if attempted directly). Officers can still update the
 status/priority of a task they're on, post progress comments, and upload attachments —
 they just don't create or hand out new tasks. A supervisor or manager can only assign a
-task — or name a manager in charge — to someone on their own team (department); admins
-can assign across any department.
+task — or name a manager in charge — to someone who shares one of that task's teams;
+admins can assign across any team.
 
 Note this is a self-service choice at registration: anyone who can register (subject to
 `ALLOWED_EMAIL_DOMAINS`) can pick Supervisor or Manager for themselves and immediately
@@ -160,7 +173,7 @@ wants to run this.
 Any account can be marked "Hidden" in Manage Staff (a checkbox per person, editable by
 an admin for anyone, including their own account). A hidden account is left out of
 every non-admin's assignee/manager dropdowns and staff lists — admins still see it
-everywhere, hidden or not. This is separate from department-scoped task access above:
+everywhere, hidden or not. This is separate from team-scoped task access above:
 hiding an account doesn't change who can see which tasks, it just keeps that person out
 of pickers other staff use day to day (useful for an owner/admin account that shouldn't
 be handed tasks like a regular team member).

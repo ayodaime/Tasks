@@ -9,7 +9,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const task = await prisma.task.findUnique({ where: { id } });
+  const task = await prisma.task.findUnique({ where: { id }, include: { groups: { select: { group: true } } } });
   if (!task || !canAccessTask(task, session.user)) {
     return NextResponse.json({ error: "Task not found." }, { status: 404 });
   }
