@@ -46,6 +46,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.user.role === "STAFF") {
+    return NextResponse.json({ error: "Only managers and admins can create tasks." }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => null);
   const title = typeof body?.title === "string" ? body.title.trim() : "";
@@ -79,6 +82,18 @@ export async function POST(req: Request) {
       );
     }
     department = session.user.department;
+  }
+
+  // Non-admins can only hand a task to someone on their own team (department).
+  // Admins can assign across departments.
+  if (assigneeId && session.user.role !== "ADMIN") {
+    const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
+    if (!assignee || assignee.department !== department) {
+      return NextResponse.json(
+        { error: "You can only assign tasks to members of your own department." },
+        { status: 400 }
+      );
+    }
   }
 
   const task = await prisma.task.create({

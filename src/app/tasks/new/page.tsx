@@ -31,6 +31,14 @@ export default function NewTaskPage() {
     if (session?.user.department) setDepartment(session.user.department);
   }, [session?.user.department]);
 
+  useEffect(() => {
+    if (session && session.user.role === "STAFF") router.replace("/tasks");
+  }, [session, router]);
+
+  // "Their team": for a non-admin the task's department is fixed to their
+  // own, so the assignee list only ever shows people on that same team.
+  const teamMembers = users?.filter((u) => u.department === department);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -57,6 +65,8 @@ export default function NewTaskPage() {
     // a clean full-page view.
     window.location.href = `/tasks/${task.id}`;
   }
+
+  if (session?.user.role === "STAFF") return null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -144,12 +154,15 @@ export default function NewTaskPage() {
             </label>
             <select id="assignee" className="input" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
               <option value="">Unassigned</option>
-              {users?.map((u) => (
+              {teamMembers?.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-xs text-slate-400">
+              Only staff in the {DEPARTMENT_LABELS[department as Department] ?? "selected"} department are shown.
+            </p>
           </div>
           <div>
             <label className="label" htmlFor="manager">

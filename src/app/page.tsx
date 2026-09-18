@@ -48,9 +48,11 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <Link href="/tasks/new" className="btn-primary">
-          + New Task
-        </Link>
+        {session.user.role !== "STAFF" && (
+          <Link href="/tasks/new" className="btn-primary">
+            + New Task
+          </Link>
+        )}
       </div>
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">

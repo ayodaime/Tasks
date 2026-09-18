@@ -7,10 +7,9 @@ import Avatar from "@/components/Avatar";
 import SignOutButton from "@/components/SignOutButton";
 import { DEPARTMENT_LABELS, type Department } from "@/lib/constants";
 
-const LINKS = [
+const BASE_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/tasks", label: "All Tasks" },
-  { href: "/tasks/new", label: "New Task" },
 ];
 
 export default function Sidebar() {
@@ -19,7 +18,12 @@ export default function Sidebar() {
 
   if (!session) return null;
 
-  const links = [...LINKS];
+  const links = [...BASE_LINKS];
+  // Task creation/assignment is a manager+ responsibility; plain staff track
+  // and update the tasks they're given, but don't create or hand out new ones.
+  if (session.user.role !== "STAFF") {
+    links.push({ href: "/tasks/new", label: "New Task" });
+  }
   if (session.user.role === "ADMIN") {
     links.push({ href: "/admin/users", label: "Manage Staff" });
   }

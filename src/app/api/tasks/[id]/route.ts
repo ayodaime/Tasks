@@ -74,7 +74,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     data.department = body.department;
   }
-  if ("assigneeId" in (body ?? {})) data.assigneeId = body.assigneeId || null;
+  if ("assigneeId" in (body ?? {})) {
+    // Assigning is a manager/admin decision, same as creating a task.
+    if (session.user.role === "STAFF") {
+      return NextResponse.json({ error: "Only managers and admins can assign tasks." }, { status: 403 });
+    }
+    const newAssigneeId = body.assigneeId || null;
+    // Non-admins can only hand a task to someone on their own team (department).
+    // A non-admin can never have changed `data.department` above (that's
+    // admin-only), so the task's existing department is always the right one
+    // to check against here.
+    if (newAssigneeId && session.user.role !== "ADMIN") {
+      const assignee = await prisma.user.findUnique({ where: { id: newAssigneeId } });
+      if (!assignee || assignee.department !== existing.department) {
+        return NextResponse.json(
+          { error: "You can only assign tasks to members of your own department." },
+          { status: 400 }
+        );
+      }
+    }
+    data.assigneeId = newAssigneeId;
+  }
   if ("managerId" in (body ?? {})) data.managerId = body.managerId || null;
   if ("dueDate" in (body ?? {})) data.dueDate = body.dueDate ? new Date(body.dueDate) : null;
 

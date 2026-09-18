@@ -131,6 +131,15 @@ department; they also get a Department filter on the task board and a Department
 when creating a task or editing an existing one. A task with no department yet
 ("Unclassified") is only visible to admins until one sets its department.
 
+### Who can create and assign tasks
+
+Only `MANAGER` and `ADMIN` accounts can create tasks or assign them (the "New Task"
+button and the Assignee field's dropdown are hidden from `STAFF` entirely, and the API
+rejects both if attempted directly). Staff can still update the status/priority of a
+task they're on, post progress comments, and upload attachments — they just don't create
+or hand out new tasks. A manager can only assign a task to someone on their own team
+(department); admins can assign across any department.
+
 ```
 prisma/schema.prisma        Database schema (User, Task, Comment, Attachment)
 src/app/                    Pages (dashboard, tasks, login/register) and API routes

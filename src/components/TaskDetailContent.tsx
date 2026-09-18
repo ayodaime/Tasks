@@ -32,6 +32,7 @@ export default function TaskDetailContent({
 }) {
   const { data: session } = useSession();
   const isAdmin = session?.user.role === "ADMIN";
+  const canAssign = session?.user.role !== "STAFF";
   const { data: task, mutate, isLoading } = useSWR<TaskDetail>(`/api/tasks/${taskId}`, fetcher);
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
 
@@ -145,18 +146,27 @@ export default function TaskDetailContent({
           </div>
           <div>
             <label className="label">Assignee</label>
-            <select
-              className="input"
-              value={task.assignee?.id ?? ""}
-              onChange={(e) => updateField("assigneeId", e.target.value)}
-            >
-              <option value="">Unassigned</option>
-              {users?.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+            {canAssign ? (
+              <select
+                className="input"
+                value={task.assignee?.id ?? ""}
+                onChange={(e) => updateField("assigneeId", e.target.value)}
+              >
+                <option value="">Unassigned</option>
+                {/* Non-admins can only hand this task to someone on the same team (department). */}
+                {users
+                  ?.filter((u) => isAdmin || u.department === task.department)
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <p className="input flex items-center bg-slate-50 text-slate-600">
+                {task.assignee?.name ?? "Unassigned"}
+              </p>
+            )}
           </div>
           <div>
             <label className="label">Manager in charge</label>
