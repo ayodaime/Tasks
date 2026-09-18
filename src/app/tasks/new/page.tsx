@@ -1,0 +1,220 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import useSWR from "swr";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import {
+  TASK_PRIORITIES,
+  PRIORITY_LABELS,
+  TASK_GROUPS,
+  TASK_GROUP_LABELS,
+  type TaskGroupCode,
+} from "@/lib/constants";
+import { userGroups, groupsOverlap } from "@/lib/groups";
+import type { UserSummary } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+export default function NewTaskPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
+  const isAdmin = session?.user.role === "ADMIN";
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("MEDIUM");
+  const [groups, setGroups] = useState<string[]>([]);
+  const [assigneeId, setAssigneeId] = useState("");
+  const [managerId, setManagerId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const ownGroups = session ? userGroups(session.user) : [];
+  // Most people (anyone outside Digital Marketing) have exactly one team, so
+  // their task is implicitly tagged with it and there's nothing to pick.
+  // Digital Marketing people with more than one team choose among their own.
+  const pickableOwnGroups = ownGroups.length > 1;
+
+  useEffect(() => {
+    if (!session || isAdmin) return;
+    if (!pickableOwnGroups) setGroups(ownGroups);
+    // Default a multi-team Digital Marketing person to all their own teams;
+    // they can narrow it with the checkboxes below.
+    else setGroups((current) => (current.length === 0 ? ownGroups : current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user.department, JSON.stringify(session?.user.subteams)]);
+
+  useEffect(() => {
+    if (session && session.user.role === "OFFICER") router.replace("/tasks");
+  }, [session, router]);
+
+  function toggleGroup(g: string) {
+    setGroups((current) => (current.includes(g) ? current.filter((x) => x !== g) : [...current, g]));
+  }
+
+  // "Their team": the assignee/manager lists only show people who share at
+  // least one of the task's selected teams.
+  const teamMembers = users?.filter((u) => groupsOverlap(userGroups(u), groups));
+  const teamManagers = users?.filter(
+    (u) =>
+      (u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN") &&
+      (isAdmin || groupsOverlap(userGroups(u), groups))
+  );
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description, priority, groups, assigneeId, managerId, dueDate }),
+    });
+
+    setLoading(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Could not create task.");
+      return;
+    }
+
+    const task = await res.json();
+    // Full navigation, not router.push: this page was itself reached via a
+    // full nav (see Sidebar/"+ New Task"), so a client-side push here would
+    // render the task's slide-over on top of this now-stale form instead of
+    // a clean full-page view.
+    window.location.href = `/tasks/${task.id}`;
+  }
+
+  if (session?.user.role === "OFFICER") return null;
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <h1 className="mb-6 text-2xl font-semibold">New Task</h1>
+
+      <form onSubmit={handleSubmit} className="card space-y-4 p-6">
+        <div>
+          <label className="label" htmlFor="title">
+            Title
+          </label>
+          <input id="title" required className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+
+        <div>
+          <label className="label" htmlFor="description">
+            Description
+          </label>
+          <textarea
+            id="description"
+            rows={4}
+            className="input"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+
+        {(isAdmin || pickableOwnGroups) && (
+          <div>
+            <label className="label">Team(s)</label>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md border border-slate-300 p-3 sm:grid-cols-3">
+              {(isAdmin ? TASK_GROUPS : (ownGroups as TaskGroupCode[])).map((g) => (
+                <label key={g} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={groups.includes(g)} onChange={() => toggleGroup(g)} />
+                  {TASK_GROUP_LABELS[g as TaskGroupCode]}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              {isAdmin
+                ? "Select one or more teams. No team selected means unclassified (admin-only)."
+                : "Select at least one of your own teams."}
+            </p>
+          </div>
+        )}
+
+        {!isAdmin && !pickableOwnGroups && ownGroups.length === 0 && (
+          <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            You don&apos;t have a team assigned yet. Ask an admin to set one in Manage Staff before creating tasks.
+          </p>
+        )}
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label" htmlFor="priority">
+              Priority
+            </label>
+            <select id="priority" className="input" value={priority} onChange={(e) => setPriority(e.target.value)}>
+              {TASK_PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {PRIORITY_LABELS[p]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="dueDate">
+              Due date
+            </label>
+            <input
+              id="dueDate"
+              type="date"
+              className="input"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label" htmlFor="assignee">
+              Assignee
+            </label>
+            <select id="assignee" className="input" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <option value="">Unassigned</option>
+              {teamMembers?.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-400">Only staff on the selected team(s) are shown.</p>
+          </div>
+          <div>
+            <label className="label" htmlFor="manager">
+              Manager in charge
+            </label>
+            <select id="manager" className="input" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
+              <option value="">None</option>
+              {teamManagers?.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="flex justify-end gap-3">
+          <button type="button" className="btn-secondary" onClick={() => router.back()}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading || (!isAdmin && groups.length === 0)}
+            className="btn-primary"
+          >
+            {loading ? "Creating..." : "Create task"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
