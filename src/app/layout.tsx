@@ -4,7 +4,7 @@ import Providers from "@/components/Providers";
 import Sidebar from "@/components/Sidebar";
 
 export const metadata: Metadata = {
-  title: "Company Tasks",
+  title: "iLOTBET Task Tracker",
   description: "Upload and track your team's tasks",
 };
 

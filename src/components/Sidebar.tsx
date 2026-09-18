@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Avatar from "@/components/Avatar";
@@ -31,9 +32,10 @@ export default function Sidebar() {
   return (
     <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-slate-200 bg-white">
       <div className="px-4 py-5">
-        <Link href="/" className="text-lg font-semibold text-brand-700">
-          Company Tasks
+        <Link href="/" className="inline-block overflow-hidden rounded-lg">
+          <Image src="/ilotbet-logo.png" alt="iLOTBET" width={440} height={115} className="h-9 w-auto" priority />
         </Link>
+        <p className="mt-1.5 text-xs font-medium text-slate-400">Task Tracker</p>
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
