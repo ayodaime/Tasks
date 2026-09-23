@@ -126,7 +126,7 @@ export default function TasksPage() {
           ))}
         </select>
         <select className="input w-auto" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
-          <option value="">Any manager</option>
+          <option value="">Any manager/supervisor</option>
           {users
             ?.filter((u) => u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN")
             .map((u) => (
