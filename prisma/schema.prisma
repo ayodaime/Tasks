@@ -1,0 +1,125 @@
+// Prisma schema for the company task tracker.
+// SQLite by default for easy self-hosting; switch provider to "postgresql"
+// and update DATABASE_URL if deploying to a platform with an ephemeral filesystem.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// role: "OFFICER" | "SUPERVISOR" | "MANAGER" | "ADMIN"
+// department: "ADMINISTRATION" | "CUSTOMER_SERVICE" | "DIGITAL_MARKETING" | "SEO" | "PR" | "HR" | null
+// (nullable so existing accounts from before this field existed aren't broken; an admin assigns one via Manage Staff)
+// subteams: only meaningful when department is "DIGITAL_MARKETING" — the specific
+// sub-team(s) (Design Team, Online Branding, Offline Branding, Social Media) this
+// person is on. A Digital Marketing person can be on more than one; everyone else's
+// scoping unit is just their single department.
+// hidden: excluded from every non-admin's view of the staff directory (assignee/
+// manager pickers, task filters) — admins still see hidden accounts everywhere,
+// including each other. Self-toggleable in Manage Staff, no lockout risk.
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("OFFICER")
+  department   String?
+  hidden       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  subteams      UserSubteam[]
+  tasksCreated  Task[]       @relation("CreatedBy")
+  tasksAssigned Task[]       @relation("AssignedTo")
+  tasksManaged  Task[]       @relation("ManagedBy")
+  comments      Comment[]
+  attachments   Attachment[]
+}
+
+// team: "DESIGN_TEAM" | "ONLINE_BRANDING" | "OFFLINE_BRANDING" | "SOCIAL_MEDIA_TEAM"
+model UserSubteam {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   String
+
+  @@unique([userId, team])
+}
+
+// status: "TODO" | "IN_PROGRESS" | "BLOCKED" | "DONE"
+// priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+// A task is scoped by one or more "groups" (TaskGroup rows) instead of a single
+// department: each group is either a non-Digital-Marketing department code or one
+// of the 4 Digital Marketing sub-team codes (never "DIGITAL_MARKETING" itself —
+// same leaf-level units used for User.department/subteams). Zero groups means
+// unclassified (admin-only, same as a null department used to mean).
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  status      String    @default("TODO")
+  priority    String    @default("MEDIUM")
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+
+  assigneeId String?
+  assignee   User?   @relation("AssignedTo", fields: [assigneeId], references: [id])
+
+  managerId String?
+  manager   User?   @relation("ManagedBy", fields: [managerId], references: [id])
+
+  groups      TaskGroup[]
+  comments    Comment[]
+  attachments Attachment[]
+
+  @@index([status])
+  @@index([assigneeId])
+  @@index([managerId])
+}
+
+model TaskGroup {
+  id     String @id @default(cuid())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  group  String
+
+  @@unique([taskId, group])
+  @@index([group])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  @@index([taskId])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  filename  String
+  filepath  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  @@index([taskId])
+}
