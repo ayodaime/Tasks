@@ -21,6 +21,38 @@ const BASE_LINKS = [
   { href: "/tasks", label: "All Tasks" },
 ];
 
+function NavIcon({ href, className }: { href: string; className?: string }) {
+  const props = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, className };
+  if (href === "/") {
+    return (
+      <svg {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 11.5 12 4l8 7.5M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9" />
+      </svg>
+    );
+  }
+  if (href === "/tasks") {
+    return (
+      <svg {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
+      </svg>
+    );
+  }
+  if (href === "/tasks/new") {
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="12" r="8.5" />
+        <path strokeLinecap="round" d="M12 8.5v7M8.5 12h7" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...props}>
+      <circle cx="9" cy="8" r="3" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 19c.6-3 2.7-5 5.5-5s4.9 2 5.5 5M16 8.5a2.7 2.7 0 1 0 0-5.4M17.5 14c2.3.3 4 2 4.5 4.5" />
+    </svg>
+  );
+}
+
 export default function Sidebar() {
   const { data: session } = useSession();
   const pathname = usePathname();
@@ -42,32 +74,38 @@ export default function Sidebar() {
         <p className="mt-1.5 text-xs font-medium text-slate-400">Task Tracker</p>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="flex-1 space-y-0.5 px-3">
         {links.map((link) => {
           const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-          const className = `block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+          const className = `group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
             active ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           }`;
+          const content = (
+            <>
+              <NavIcon href={link.href} className={active ? "text-brand-600" : "text-slate-400 group-hover:text-slate-500"} />
+              {link.label}
+            </>
+          );
           // Plain <a> for /tasks/new: Next's client-side Link would trigger the
           // @modal intercepting route for /tasks/[id], mistaking "new" for a
           // task id. A full navigation bypasses interception entirely.
           if (link.href === "/tasks/new") {
             return (
               <a key={link.href} href={link.href} className={className} onClick={() => setOpen(false)}>
-                {link.label}
+                {content}
               </a>
             );
           }
           return (
             <Link key={link.href} href={link.href} className={className} onClick={() => setOpen(false)}>
-              {link.label}
+              {content}
             </Link>
           );
         })}
       </nav>
 
       <div className="border-t border-slate-200 p-3">
-        <div className="flex items-center gap-2 px-1 py-2">
+        <div className="flex items-center gap-2.5 rounded-lg px-1.5 py-2">
           <Avatar name={session.user?.name ?? "?"} size="md" />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-slate-800">{session.user?.name}</p>

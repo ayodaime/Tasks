@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { STATUS_LABELS, TASK_STATUSES } from "@/lib/constants";
+import { STATUS_LABELS, TASK_STATUSES, STATUS_ACCENT } from "@/lib/constants";
 import { StatusBadge, PriorityBadge } from "@/components/Badges";
 import { taskAccessWhere } from "@/lib/taskAccess";
 
@@ -55,9 +55,10 @@ export default async function DashboardPage() {
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {TASK_STATUSES.map((status) => (
-          <div key={status} className="card p-4">
+          <div key={status} className="card relative overflow-hidden p-4">
+            <span className={`absolute inset-x-0 top-0 h-1 ${STATUS_ACCENT[status]}`} />
             <p className="text-sm text-slate-500">{STATUS_LABELS[status]}</p>
-            <p className="mt-1 text-2xl font-semibold">{countByStatus[status]}</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">{countByStatus[status]}</p>
           </div>
         ))}
       </section>
@@ -65,10 +66,15 @@ export default async function DashboardPage() {
       <section className="card p-4">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-medium text-slate-700">Overall progress</p>
-          <p className="text-sm text-slate-500">{completionRate}% done ({doneCount}/{totalTasks})</p>
+          <p className="text-sm text-slate-500 tabular-nums">
+            {completionRate}% done ({doneCount}/{totalTasks})
+          </p>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full bg-brand-500" style={{ width: `${completionRate}%` }} />
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 shadow-[inset_0_1px_2px_rgba(15,23,42,0.06)]">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400 transition-[width] duration-500 ease-out"
+            style={{ width: `${completionRate}%` }}
+          />
         </div>
       </section>
 

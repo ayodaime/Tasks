@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import { PriorityBadge } from "@/components/Badges";
-import { TASK_STATUSES, STATUS_LABELS } from "@/lib/constants";
+import { TASK_STATUSES, STATUS_LABELS, STATUS_ACCENT } from "@/lib/constants";
 import type { TaskSummary } from "@/lib/types";
 
 export default function TaskBoard({
@@ -37,13 +37,14 @@ export default function TaskBoard({
             if (taskId) onStatusChange(taskId, col.status);
             setDragOverColumn(null);
           }}
-          className={`flex min-h-[200px] flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3 transition-colors ${
-            dragOverColumn === col.status ? "border-brand-400 bg-brand-50" : ""
+          className={`flex min-h-[200px] flex-col gap-2 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 transition-colors duration-150 ${
+            dragOverColumn === col.status ? "border-brand-400 bg-brand-50 ring-1 ring-brand-200" : ""
           }`}
         >
-          <div className="mb-1 flex items-center justify-between px-1">
+          <div className="mb-1 flex items-center gap-2 px-1">
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_ACCENT[col.status]}`} />
             <h3 className="text-sm font-semibold text-slate-700">{STATUS_LABELS[col.status]}</h3>
-            <span className="text-xs text-slate-400">{col.tasks.length}</span>
+            <span className="ml-auto text-xs text-slate-400">{col.tasks.length}</span>
           </div>
 
           {col.tasks.map((task) => (
@@ -55,7 +56,7 @@ export default function TaskBoard({
                 e.dataTransfer.setData("text/plain", task.id);
                 e.dataTransfer.effectAllowed = "move";
               }}
-              className="card block cursor-grab space-y-2 p-3 hover:shadow-md active:cursor-grabbing"
+              className="card-interactive block cursor-grab space-y-2 p-3 active:cursor-grabbing"
             >
               <p className="text-sm font-medium text-slate-800">{task.title}</p>
               <div className="flex items-center justify-between">

@@ -109,6 +109,15 @@ export const STATUS_COLORS: Record<TaskStatus, string> = {
   DONE: "bg-green-100 text-green-700",
 };
 
+// Same hue family as STATUS_COLORS, sized for a small accent (a stat card's
+// top border, a column header dot) rather than a full badge background.
+export const STATUS_ACCENT: Record<TaskStatus, string> = {
+  TODO: "bg-slate-400",
+  IN_PROGRESS: "bg-blue-500",
+  BLOCKED: "bg-red-500",
+  DONE: "bg-green-500",
+};
+
 export const PRIORITY_COLORS: Record<TaskPriority, string> = {
   LOW: "bg-slate-100 text-slate-600",
   MEDIUM: "bg-amber-100 text-amber-700",
