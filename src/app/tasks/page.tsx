@@ -15,6 +15,7 @@ import {
   TASK_GROUPS,
   TASK_GROUP_LABELS,
 } from "@/lib/constants";
+import { userGroups, groupsOverlap } from "@/lib/groups";
 import type { TaskSummary, UserSummary } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -41,6 +42,11 @@ export default function TasksPage() {
 
   const { data: tasks, isLoading, mutate } = useSWR<TaskSummary[]>(`/api/tasks?${query}`, fetcher);
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
+
+  // Non-admins can only pick an assignee who shares one of their own teams;
+  // admins can filter by anyone.
+  const ownGroups = session ? userGroups(session.user) : [];
+  const assigneeOptions = isAdmin ? users : users?.filter((u) => groupsOverlap(userGroups(u), ownGroups));
 
   async function handleStatusChange(taskId: string, newStatus: string) {
     mutate(
@@ -113,7 +119,7 @@ export default function TasksPage() {
         </select>
         <select className="input w-auto" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
           <option value="">Any assignee</option>
-          {users?.map((u) => (
+          {assigneeOptions?.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
             </option>
