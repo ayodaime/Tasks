@@ -153,20 +153,22 @@ Four roles, in ascending order of privilege: `OFFICER`, `SUPERVISOR`, `MANAGER`,
 never self-selectable, it's only granted automatically to the very first account created,
 or later by an existing admin via Manage Staff.
 
-Only `SUPERVISOR`, `MANAGER`, and `ADMIN` accounts can create tasks or assign them (the
-"New Task" button and the Assignee field's dropdown are hidden from `OFFICER` entirely,
-and the API rejects both if attempted directly). Officers can still update the
-status/priority of a task they're on, post progress comments, and upload attachments —
-they just don't create or hand out new tasks. A supervisor or manager can only assign a
-task — or name a manager in charge — to someone who shares one of that task's teams;
-admins can assign across any team.
+Anyone can create a task, including `OFFICER` accounts — the "New Task" button is
+available to everyone, and, same as `SUPERVISOR`/`MANAGER`, an officer can set the
+assignee and manager in charge while creating it, as long as both share one of the
+task's own teams. What officers can't do is reassign an *existing* task afterward —
+changing its assignee or manager in charge on the task detail page is reserved for
+`SUPERVISOR`, `MANAGER`, and `ADMIN`. Officers can still update the status/priority of
+a task they're on, post progress comments, and upload attachments regardless. A
+supervisor or manager can only assign a task — or name a manager in charge — to
+someone who shares one of that task's teams; admins can assign across any team.
 
-Note this is a self-service choice at registration: anyone who can register (subject to
-`ALLOWED_EMAIL_DOMAINS`) can pick Supervisor or Manager for themselves and immediately
-get task-creation/assignment rights, with no admin approval step. If you'd rather gate
-that behind admin approval instead, an admin can always demote someone's role afterward
-in Manage Staff — worth knowing if that self-service model doesn't fit how your company
-wants to run this.
+Note picking Supervisor or Manager is a self-service choice at registration: anyone who
+can register (subject to `ALLOWED_EMAIL_DOMAINS`) can pick either for themselves
+immediately, with no admin approval step. If you'd rather gate that behind admin
+approval instead, an admin can always demote someone's role afterward in Manage Staff —
+worth knowing if that self-service model doesn't fit how your company wants to run
+this.
 
 ### Hiding an account from staff pickers
 

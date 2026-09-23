@@ -68,7 +68,7 @@ export default function TasksPage() {
         {/* Plain <a>, not <Link>: client-side nav here would trigger the
             @modal intercepting route for /tasks/[id], mistaking "new" for a
             task id. A full navigation bypasses interception entirely. */}
-        {session && session.user.role !== "OFFICER" && (
+        {session && (
           <a href="/tasks/new" className="btn-primary">
             + New Task
           </a>

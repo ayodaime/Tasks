@@ -47,10 +47,6 @@ export default function NewTaskPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user.department, JSON.stringify(session?.user.subteams)]);
 
-  useEffect(() => {
-    if (session && session.user.role === "OFFICER") router.replace("/tasks");
-  }, [session, router]);
-
   function toggleGroup(g: string) {
     setGroups((current) => (current.includes(g) ? current.filter((x) => x !== g) : [...current, g]));
   }
@@ -90,8 +86,6 @@ export default function NewTaskPage() {
     // a clean full-page view.
     window.location.href = `/tasks/${task.id}`;
   }
-
-  if (session?.user.role === "OFFICER") return null;
 
   return (
     <div className="mx-auto max-w-2xl">

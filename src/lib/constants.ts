@@ -4,9 +4,10 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
-// OFFICER: base role, works on assigned tasks only.
-// SUPERVISOR / MANAGER: equivalent tiers that can create and assign tasks
-// within their own department.
+// OFFICER: base role; can create tasks within their own team, but can't
+// reassign an existing task's assignee or manager in charge.
+// SUPERVISOR / MANAGER: equivalent tiers that can create, assign, and
+// reassign tasks within their own department.
 // ADMIN: full access across departments; never self-selectable at
 // registration, only granted via Manage Staff (or automatically to the
 // very first account created).

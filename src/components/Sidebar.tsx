@@ -26,12 +26,7 @@ export default function Sidebar() {
 
   if (!session) return null;
 
-  const links = [...BASE_LINKS];
-  // Task creation/assignment is a supervisor+ responsibility; officers track
-  // and update the tasks they're given, but don't create or hand out new ones.
-  if (session.user.role !== "OFFICER") {
-    links.push({ href: "/tasks/new", label: "New Task" });
-  }
+  const links = [...BASE_LINKS, { href: "/tasks/new", label: "New Task" }];
   if (session.user.role === "ADMIN") {
     links.push({ href: "/admin/users", label: "Manage Staff" });
   }
