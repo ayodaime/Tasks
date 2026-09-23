@@ -47,7 +47,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
     mutate();
   }
 
-  function changeField(userId: string, field: "role" | "department" | "hidden", value: string | boolean) {
+  function changeField(userId: string, field: "role" | "department" | "hidden" | "hideAsManager", value: string | boolean) {
     return submitUpdate(userId, { [field]: value });
   }
 
@@ -94,6 +94,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                   <th className="px-4 py-2">Department</th>
                   {group.key === "DIGITAL_MARKETING" && <th className="px-4 py-2">Team(s)</th>}
                   <th className="px-4 py-2">Hidden</th>
+                  <th className="px-4 py-2">Manager picker</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -161,6 +162,23 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
                         />
                         <span className="text-xs">{u.hidden ? "Hidden" : "Visible"}</span>
                       </label>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.hidden ? (
+                        <span className="text-xs text-slate-400">Already hidden</span>
+                      ) : (
+                        <label className="inline-flex items-center gap-2 text-slate-600">
+                          <input
+                            type="checkbox"
+                            checked={!!u.hideAsManager}
+                            disabled={savingId === u.id}
+                            onChange={(e) => changeField(u.id, "hideAsManager", e.target.checked)}
+                          />
+                          <span className="text-xs">
+                            {u.hideAsManager ? "Excluded" : "Included"}
+                          </span>
+                        </label>
+                      )}
                     </td>
                   </tr>
                 ))}

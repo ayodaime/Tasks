@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!target) return NextResponse.json({ error: "User not found." }, { status: 404 });
 
   const body = await req.json().catch(() => null);
-  const data: { role?: string; department?: string | null; hidden?: boolean } = {};
+  const data: { role?: string; department?: string | null; hidden?: boolean; hideAsManager?: boolean } = {};
 
   if ("role" in (body ?? {})) {
     if (id === session.user.id) {
@@ -40,6 +40,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: "Invalid hidden value." }, { status: 400 });
     }
     data.hidden = body.hidden;
+  }
+
+  if ("hideAsManager" in (body ?? {})) {
+    if (typeof body.hideAsManager !== "boolean") {
+      return NextResponse.json({ error: "Invalid hideAsManager value." }, { status: 400 });
+    }
+    data.hideAsManager = body.hideAsManager;
   }
 
   // Sub-teams only mean anything for Digital Marketing, and only ever apply
@@ -91,6 +98,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         role: true,
         department: true,
         hidden: true,
+        hideAsManager: true,
         subteams: { select: { team: true } },
       },
     });

@@ -6,6 +6,7 @@ export type UserSummary = {
   department?: string | null;
   subteams?: string[];
   hidden?: boolean;
+  hideAsManager?: boolean;
 };
 
 export type TaskSummary = {

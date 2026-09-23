@@ -180,6 +180,14 @@ hiding an account doesn't change who can see which tasks, it just keeps that per
 of pickers other staff use day to day (useful for an owner/admin account that shouldn't
 be handed tasks like a regular team member).
 
+For a lighter touch, the separate "Manager picker" checkbox next to it hides an account
+from just the "manager in charge" dropdown, while leaving it visible and pickable as an
+assignee — useful for an admin/owner who does hands-on work and wants to be assignable,
+but shouldn't turn up as an option when someone's naming who's overseeing a task. It has
+no effect on an account that's already fully "Hidden" (that already excludes it from
+everything), and like "Hidden", admins can still pick the account as manager regardless —
+only non-admins are affected.
+
 ```
 prisma/schema.prisma        Database schema (User, Task, Comment, Attachment)
 src/app/                    Pages (dashboard, tasks, login/register) and API routes

@@ -21,15 +21,21 @@ datasource db {
 // hidden: excluded from every non-admin's view of the staff directory (assignee/
 // manager pickers, task filters) — admins still see hidden accounts everywhere,
 // including each other. Self-toggleable in Manage Staff, no lockout risk.
+// hideAsManager: a finer-grained version of the same idea, scoped to just the
+// "manager in charge" picker — lets someone stay pickable as an assignee while
+// staying out of everyone's manager dropdown (e.g. an owner/admin who does work
+// but shouldn't be named the manager overseeing a task). Has no effect when
+// `hidden` is already true, since that already excludes them from everything.
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         String   @default("OFFICER")
-  department   String?
-  hidden       Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  role          String   @default("OFFICER")
+  department    String?
+  hidden        Boolean  @default(false)
+  hideAsManager Boolean  @default(false)
+  createdAt     DateTime @default(now())
 
   subteams      UserSubteam[]
   tasksCreated  Task[]       @relation("CreatedBy")

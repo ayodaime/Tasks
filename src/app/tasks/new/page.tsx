@@ -57,7 +57,7 @@ export default function NewTaskPage() {
   const teamManagers = users?.filter(
     (u) =>
       (u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN") &&
-      (isAdmin || groupsOverlap(userGroups(u), groups))
+      (isAdmin || (!u.hideAsManager && groupsOverlap(userGroups(u), groups)))
   );
 
   async function handleSubmit(e: React.FormEvent) {
