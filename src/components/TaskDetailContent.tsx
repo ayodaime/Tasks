@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { StatusBadge, PriorityBadge } from "@/components/Badges";
+import Skeleton from "@/components/Skeleton";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   TASK_STATUSES,
   TASK_PRIORITIES,
@@ -44,6 +46,8 @@ export default function TaskDetailContent({
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function updateField(field: string, value: unknown) {
@@ -88,21 +92,32 @@ export default function TaskDetailContent({
   }
 
   async function deleteTask() {
-    if (!confirm("Delete this task? This can't be undone.")) return;
+    setConfirmingDelete(false);
     const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || "Could not delete this task.");
+      setDeleteError(data.error || "Could not delete this task.");
       return;
     }
     onDeleted();
   }
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading...</p>;
+  if (isLoading) return <TaskDetailSkeleton />;
   if (!task) return <p className="text-sm text-red-600">Task not found.</p>;
 
   return (
     <div className="space-y-6">
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete this task?"
+          message="This can't be undone."
+          confirmLabel="Delete"
+          danger
+          onConfirm={deleteTask}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
+
       <div className="card p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -112,11 +127,15 @@ export default function TaskDetailContent({
             </p>
           </div>
           {canDelete && (
-            <button className="text-sm text-red-600 hover:underline" onClick={deleteTask}>
+            <button className="text-sm text-red-600 hover:underline" onClick={() => setConfirmingDelete(true)}>
               Delete
             </button>
           )}
         </div>
+
+        {deleteError && (
+          <p className="mt-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm text-red-600">{deleteError}</p>
+        )}
 
         {task.description && <p className="mt-4 whitespace-pre-wrap text-slate-700">{task.description}</p>}
 
@@ -271,6 +290,39 @@ export default function TaskDetailContent({
             Post
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function TaskDetailSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="card space-y-4 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        </div>
+        <Skeleton className="h-16 w-full" />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-1.5">
+              <Skeleton className="h-3.5 w-16" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="card space-y-3 p-6">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-4 w-48" />
+      </div>
+      <div className="card space-y-3 p-6">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-14 w-full" />
       </div>
     </div>
   );

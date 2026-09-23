@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import Skeleton from "@/components/Skeleton";
 import {
   DEPARTMENTS,
   DEPARTMENT_LABELS,
@@ -66,7 +67,7 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
     return submitUpdate(u.id, { subteams: next });
   }
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading...</p>;
+  if (isLoading) return <UsersTableSkeleton />;
 
   return (
     <div className="space-y-6">
@@ -168,6 +169,30 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function UsersTableSkeleton() {
+  return (
+    <div className="space-y-6">
+      {Array.from({ length: 2 }).map((_, group) => (
+        <div key={group} className="card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2">
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <div className="divide-y divide-slate-100">
+            {Array.from({ length: 3 }).map((_, row) => (
+              <div key={row} className="flex items-center gap-4 px-4 py-3">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-8 w-28" />
+                <Skeleton className="h-8 w-28" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

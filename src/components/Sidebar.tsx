@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -23,6 +24,7 @@ const BASE_LINKS = [
 export default function Sidebar() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   if (!session) return null;
 
@@ -31,10 +33,10 @@ export default function Sidebar() {
     links.push({ href: "/admin/users", label: "Manage Staff" });
   }
 
-  return (
-    <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-slate-200 bg-white">
+  const nav = (
+    <>
       <div className="px-4 py-5">
-        <Link href="/" className="inline-block overflow-hidden rounded-lg">
+        <Link href="/" className="inline-block overflow-hidden rounded-lg" onClick={() => setOpen(false)}>
           <Image src="/ilotbet-logo.png" alt="iLOTBET" width={440} height={115} className="h-9 w-auto" priority />
         </Link>
         <p className="mt-1.5 text-xs font-medium text-slate-400">Task Tracker</p>
@@ -51,13 +53,13 @@ export default function Sidebar() {
           // task id. A full navigation bypasses interception entirely.
           if (link.href === "/tasks/new") {
             return (
-              <a key={link.href} href={link.href} className={className}>
+              <a key={link.href} href={link.href} className={className} onClick={() => setOpen(false)}>
                 {link.label}
               </a>
             );
           }
           return (
-            <Link key={link.href} href={link.href} className={className}>
+            <Link key={link.href} href={link.href} className={className} onClick={() => setOpen(false)}>
               {link.label}
             </Link>
           );
@@ -83,6 +85,48 @@ export default function Sidebar() {
         </div>
         <SignOutButton />
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar: the full sidebar is off-canvas below md, reachable via this hamburger. */}
+      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+        <Link href="/" className="inline-block overflow-hidden rounded-lg">
+          <Image src="/ilotbet-logo.png" alt="iLOTBET" width={440} height={115} className="h-7 w-auto" priority />
+        </Link>
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open menu"
+          className="rounded-md p-2 text-slate-500 hover:bg-slate-100"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </header>
+
+      <aside className="hidden h-screen w-56 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
+        {nav}
+      </aside>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setOpen(false)} />
+          <aside className="relative flex h-full w-64 max-w-[80vw] flex-col bg-white shadow-xl">
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close menu"
+              className="absolute right-3 top-4 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" d="M6 6l12 12M6 18L18 6" />
+              </svg>
+            </button>
+            {nav}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

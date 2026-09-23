@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import Avatar from "@/components/Avatar";
 import TaskBoard from "@/components/TaskBoard";
+import Skeleton from "@/components/Skeleton";
 import { StatusBadge, PriorityBadge } from "@/components/Badges";
 import {
   TASK_PRIORITIES,
@@ -151,8 +152,10 @@ export default function TasksPage() {
         )}
       </div>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading...</p>}
-      {!isLoading && tasks?.length === 0 && <p className="text-sm text-slate-500">No tasks match these filters.</p>}
+      {isLoading && (view === "board" ? <TaskBoardSkeleton /> : <TaskListSkeleton />)}
+      {!isLoading && tasks?.length === 0 && (
+        <div className="card p-8 text-center text-sm text-slate-500">No tasks match these filters.</div>
+      )}
 
       {!isLoading && tasks && tasks.length > 0 && view === "board" && (
         <TaskBoard tasks={tasks} onStatusChange={handleStatusChange} />
@@ -184,6 +187,40 @@ export default function TasksPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function TaskBoardSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, col) => (
+        <div key={col} className="flex min-h-[200px] flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+          <Skeleton className="mb-1 h-4 w-20" />
+          {Array.from({ length: 2 }).map((_, card) => (
+            <div key={card} className="card space-y-2 p-3">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/3" />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TaskListSkeleton() {
+  return (
+    <div className="card divide-y divide-slate-100">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-4">
+          <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
