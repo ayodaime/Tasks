@@ -34,8 +34,12 @@ export default function TaskDetailContent({
   const { data: session } = useSession();
   const isAdmin = session?.user.role === "ADMIN";
   const canAssign = session?.user.role !== "OFFICER";
+  const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "MANAGER" || session?.user.role === "SUPERVISOR";
   const { data: task, mutate, isLoading } = useSWR<TaskDetail>(`/api/tasks/${taskId}`, fetcher);
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
+  // Matches the API's own rule: a task can only be deleted by a
+  // supervisor/manager/admin, or by whoever created it.
+  const canDelete = isPrivileged || task?.createdBy.id === session?.user.id;
 
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
@@ -85,7 +89,12 @@ export default function TaskDetailContent({
 
   async function deleteTask() {
     if (!confirm("Delete this task? This can't be undone.")) return;
-    await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Could not delete this task.");
+      return;
+    }
     onDeleted();
   }
 
@@ -102,9 +111,11 @@ export default function TaskDetailContent({
               Created by {task.createdBy.name} on {new Date(task.createdAt).toLocaleDateString()}
             </p>
           </div>
-          <button className="text-sm text-red-600 hover:underline" onClick={deleteTask}>
-            Delete
-          </button>
+          {canDelete && (
+            <button className="text-sm text-red-600 hover:underline" onClick={deleteTask}>
+              Delete
+            </button>
+          )}
         </div>
 
         {task.description && <p className="mt-4 whitespace-pre-wrap text-slate-700">{task.description}</p>}
