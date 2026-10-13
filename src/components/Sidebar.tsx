@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Avatar from "@/components/Avatar";
 import SignOutButton from "@/components/SignOutButton";
+import NotificationBell from "@/components/NotificationBell";
+import { registerServiceWorker } from "@/lib/pushClient";
 import {
   DEPARTMENT_LABELS,
   DIGITAL_MARKETING_TEAM_LABELS,
@@ -58,6 +60,10 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (session) registerServiceWorker().catch(() => {});
+  }, [session]);
+
   if (!session) return null;
 
   const links = [...BASE_LINKS, { href: "/tasks/new", label: "New Task" }];
@@ -68,9 +74,14 @@ export default function Sidebar() {
   const nav = (
     <>
       <div className="px-4 py-5">
-        <Link href="/" className="inline-block overflow-hidden rounded-lg" onClick={() => setOpen(false)}>
-          <Image src="/ilotbet-logo.png" alt="iLOTBET" width={440} height={115} className="h-9 w-auto" priority />
-        </Link>
+        <div className="flex items-start justify-between">
+          <Link href="/" className="inline-block overflow-hidden rounded-lg" onClick={() => setOpen(false)}>
+            <Image src="/ilotbet-logo.png" alt="iLOTBET" width={440} height={115} className="h-9 w-auto" priority />
+          </Link>
+          <div className="hidden md:block">
+            <NotificationBell align="left" />
+          </div>
+        </div>
         <p className="mt-1.5 text-xs font-medium text-slate-400">Task Tracker</p>
       </div>
 
@@ -133,15 +144,18 @@ export default function Sidebar() {
         <Link href="/" className="inline-block overflow-hidden rounded-lg">
           <Image src="/ilotbet-logo.png" alt="iLOTBET" width={440} height={115} className="h-7 w-auto" priority />
         </Link>
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="rounded-md p-2 text-slate-500 hover:bg-slate-100"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
+            className="rounded-md p-2 text-slate-500 hover:bg-slate-100"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <aside className="hidden h-screen w-56 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">

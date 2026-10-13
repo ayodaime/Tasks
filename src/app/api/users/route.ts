@@ -20,6 +20,7 @@ export async function GET() {
       role: true,
       department: true,
       hidden: true,
+      hideAsManager: true,
       subteams: { select: { team: true } },
     },
     orderBy: { name: "asc" },

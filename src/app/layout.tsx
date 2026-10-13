@@ -9,6 +9,12 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "iLOTBET Task Tracker",
   description: "Upload and track your team's tasks",
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Tasks" },
+};
+
+export const viewport = {
+  themeColor: "#16a34a",
 };
 
 // Every page depends on the signed-in user's session and live data, so

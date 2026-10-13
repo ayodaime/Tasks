@@ -218,7 +218,7 @@ export default function TaskDetailContent({
                   ?.filter(
                     (u) =>
                       (u.role === "MANAGER" || u.role === "SUPERVISOR" || u.role === "ADMIN") &&
-                      (isAdmin || groupsOverlap(userGroups(u), task.groups))
+                      (isAdmin || (!u.hideAsManager && groupsOverlap(userGroups(u), task.groups)))
                   )
                   .map((u) => (
                     <option key={u.id} value={u.id}>
