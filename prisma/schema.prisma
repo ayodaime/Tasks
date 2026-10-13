@@ -37,12 +37,14 @@ model User {
   hideAsManager Boolean  @default(false)
   createdAt     DateTime @default(now())
 
-  subteams      UserSubteam[]
-  tasksCreated  Task[]       @relation("CreatedBy")
-  tasksAssigned Task[]       @relation("AssignedTo")
-  tasksManaged  Task[]       @relation("ManagedBy")
-  comments      Comment[]
-  attachments   Attachment[]
+  subteams          UserSubteam[]
+  tasksCreated      Task[]             @relation("CreatedBy")
+  tasksAssigned     Task[]             @relation("AssignedTo")
+  tasksManaged      Task[]             @relation("ManagedBy")
+  comments          Comment[]
+  attachments       Attachment[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
 }
 
 // team: "DESIGN_TEAM" | "ONLINE_BRANDING" | "OFFLINE_BRANDING" | "SOCIAL_MEDIA_TEAM"
@@ -81,9 +83,10 @@ model Task {
   managerId String?
   manager   User?   @relation("ManagedBy", fields: [managerId], references: [id])
 
-  groups      TaskGroup[]
-  comments    Comment[]
-  attachments Attachment[]
+  groups        TaskGroup[]
+  comments      Comment[]
+  attachments   Attachment[]
+  notifications Notification[]
 
   @@index([status])
   @@index([assigneeId])
@@ -128,4 +131,42 @@ model Attachment {
   uploadedBy   User   @relation(fields: [uploadedById], references: [id])
 
   @@index([taskId])
+}
+
+// type: "ASSIGNED" | "MANAGER_ASSIGNED" — which role the user was just given on
+// the task. One row per "tagging" event; this is the in-app notification feed,
+// independent of whether a push message was also sent (push is best-effort and
+// has no durable record of its own).
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+// One row per browser/device a user has granted push permission on (a person
+// can be subscribed on more than one). `endpoint` is the push service URL the
+// browser gave us; p256dh/auth are the keys needed to encrypt messages to it.
+// A subscription is deleted once its endpoint starts rejecting pushes (the
+// browser unsubscribed it, e.g. the user cleared site data or uninstalled).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

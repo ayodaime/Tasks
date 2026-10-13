@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { TASK_GROUPS, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
 import { canAccessTask } from "@/lib/taskAccess";
 import { userGroups, groupsOverlap } from "@/lib/groups";
+import { notifyUser } from "@/lib/notify";
 
 const taskDetailInclude = {
   createdBy: { select: { id: true, name: true, email: true } },
@@ -149,6 +150,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       include: taskDetailInclude,
     });
   });
+
+  // Only notify when the field actually changed to a new, non-null person —
+  // not on every edit that happens to include assigneeId/managerId unchanged.
+  if ("assigneeId" in data && data.assigneeId && data.assigneeId !== existing.assigneeId && data.assigneeId !== session.user.id) {
+    notifyUser(data.assigneeId as string, {
+      type: "ASSIGNED",
+      message: `You were assigned to "${task.title}"`,
+      taskId: task.id,
+    });
+  }
+  if ("managerId" in data && data.managerId && data.managerId !== existing.managerId && data.managerId !== session.user.id) {
+    notifyUser(data.managerId as string, {
+      type: "MANAGER_ASSIGNED",
+      message: `You were named manager in charge of "${task.title}"`,
+      taskId: task.id,
+    });
+  }
 
   return NextResponse.json(serializeTask(task));
 }

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { TASK_GROUPS, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
 import { taskAccessWhere } from "@/lib/taskAccess";
 import { userGroups, groupsOverlap } from "@/lib/groups";
+import { notifyUser } from "@/lib/notify";
 
 const taskListInclude = {
   createdBy: { select: { id: true, name: true, email: true } },
@@ -130,6 +131,17 @@ export async function POST(req: Request) {
     },
     include: taskListInclude,
   });
+
+  if (assigneeId && assigneeId !== session.user.id) {
+    notifyUser(assigneeId, { type: "ASSIGNED", message: `You were assigned to "${title}"`, taskId: task.id });
+  }
+  if (managerId && managerId !== session.user.id && managerId !== assigneeId) {
+    notifyUser(managerId, {
+      type: "MANAGER_ASSIGNED",
+      message: `You were named manager in charge of "${title}"`,
+      taskId: task.id,
+    });
+  }
 
   return NextResponse.json(serializeTask(task), { status: 201 });
 }

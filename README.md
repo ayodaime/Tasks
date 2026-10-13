@@ -15,6 +15,9 @@ Everything runs as one self-contained app — no external services required to g
 - File attachments per task (uploaded files, 10MB max)
 - Progress-update comment thread per task
 - First person to register becomes an admin automatically
+- Notifications when you're assigned a task or named manager in charge — an
+  in-app bell always, plus an optional browser push alert that reaches you
+  even when the app isn't open (see [Notifications](#notifications) below)
 
 ## 1. Local setup
 
@@ -187,6 +190,43 @@ but shouldn't turn up as an option when someone's naming who's overseeing a task
 no effect on an account that's already fully "Hidden" (that already excludes it from
 everything), and like "Hidden", admins can still pick the account as manager regardless —
 only non-admins are affected.
+
+### Notifications
+
+Whenever someone is assigned to a task, or named manager in charge, they get notified
+two ways:
+
+- **In-app bell** (top of the sidebar) — always on, no setup needed. Shows unread count,
+  a feed of recent notifications, and clicking one jumps straight to that task.
+- **Browser push** — an OS-level notification that shows up even if the app isn't open
+  (though the browser itself needs to still be running). Opt-in per device: the bell's
+  dropdown offers an "enable" button the first time someone has an unread notification
+  and hasn't subscribed yet; clicking it asks for the browser's notification permission.
+
+Push is entirely optional and self-hosted — no third-party account or paid service
+required, just a one-time [VAPID](https://web.dev/push-notifications-overview/) key pair
+your own server uses to talk directly to each browser's push service. To turn it on:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Then set these three env vars (see `.env.example`) using that output:
+
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — the generated pair, used server-side to sign
+  outgoing pushes
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — the **same** public key, baked into the client bundle
+  at build time (never put the private key here)
+- `VAPID_SUBJECT` — a `mailto:` address or `https:` URL identifying who's sending the
+  pushes (most push services require this)
+
+Leave all three blank to skip push — the in-app bell keeps working regardless. Since
+`NEXT_PUBLIC_VAPID_PUBLIC_KEY` is inlined at build time, setting it after the first
+deploy needs a rebuild, not just a restart.
+
+For anyone who installs the app to their phone's home screen (the browser's "Add to
+Home Screen" / "Install" prompt — the app is an installable PWA), push notifications
+work there too, reaching them even when they're away from their laptop entirely.
 
 ```
 prisma/schema.prisma        Database schema (User, Task, Comment, Attachment)

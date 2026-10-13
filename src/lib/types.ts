@@ -45,3 +45,12 @@ export type TaskDetail = TaskSummary & {
   comments: CommentItem[];
   attachments: AttachmentItem[];
 };
+
+export type NotificationItem = {
+  id: string;
+  type: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  taskId: string | null;
+};
