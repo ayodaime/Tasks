@@ -6,7 +6,7 @@ import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import Skeleton from "@/components/Skeleton";
 import { userGroups, groupsOverlap } from "@/lib/groups";
-import type { DailyActivity, UserSummary } from "@/lib/types";
+import type { DailyActivity, TeamDailyActivity, UserSummary } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -25,6 +25,37 @@ function formatDate(iso: string) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+// Plain text, one section per person — meant to be skimmed quickly or
+// pasted elsewhere, which is most of what "summarizing" a team's day means
+// in practice: a manager reads down this instead of opening each person's
+// page one at a time.
+function formatTeamReport(team: TeamDailyActivity): string {
+  const lines = [`Team Daily Activity — ${formatDate(team.date)}`, ""];
+  for (const m of team.members) {
+    const hasAny = m.completed.length > 0 || m.updates.length > 0 || m.notes.length > 0 || m.plans.length > 0;
+    lines.push(`== ${m.user.name} ==`);
+    if (m.plans.length > 0) {
+      lines.push("Planned for this day:");
+      for (const p of m.plans) lines.push(`- ${p.body}`);
+    }
+    if (m.completed.length > 0) {
+      lines.push("Completed:");
+      for (const t of m.completed) lines.push(`- ${t.title}`);
+    }
+    if (m.updates.length > 0) {
+      lines.push("Updates:");
+      for (const u of m.updates) lines.push(`- ${u.taskTitle}: ${u.body}`);
+    }
+    if (m.notes.length > 0) {
+      lines.push("Notes:");
+      for (const n of m.notes) lines.push(`- ${n.body}`);
+    }
+    if (!hasAny) lines.push("Nothing logged.");
+    lines.push("");
+  }
+  return lines.join("\n").trim() + "\n";
 }
 
 export default function DailyActivityPage() {
@@ -144,6 +175,26 @@ export default function DailyActivityPage() {
     mutateTomorrow();
   }
 
+  const canDownloadTeam = session?.user.role === "MANAGER" || session?.user.role === "SUPERVISOR" || isAdmin;
+  const [downloading, setDownloading] = useState(false);
+  async function handleDownloadTeam() {
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/daily-activity/team?date=${date}`);
+      if (!res.ok) return;
+      const team: TeamDailyActivity = await res.json();
+      const blob = new Blob([formatTeamReport(team)], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `team-daily-activity-${date}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -168,6 +219,11 @@ export default function DailyActivityPage() {
               </option>
             ))}
         </select>
+        {canDownloadTeam && (
+          <button className="btn-secondary ml-auto" onClick={handleDownloadTeam} disabled={downloading}>
+            {downloading ? "Preparing…" : "Download team activity"}
+          </button>
+        )}
       </div>
 
       {isLoading && (

@@ -63,3 +63,8 @@ export type DailyActivity = {
   notes: { id: string; body: string; createdAt: string }[];
   plans: { id: string; body: string; createdAt: string }[];
 };
+
+export type TeamDailyActivity = {
+  date: string;
+  members: Omit<DailyActivity, "date">[];
+};
