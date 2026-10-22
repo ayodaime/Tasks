@@ -47,6 +47,15 @@ export default function NewTaskPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user.department, JSON.stringify(session?.user.subteams)]);
 
+  useEffect(() => {
+    // An officer's most common task is a personal one, so default the
+    // assignee to themselves instead of leaving it on Unassigned — they can
+    // still change it. Other roles keep the existing blank default, since
+    // they're more often assigning to someone else.
+    if (session?.user.role === "OFFICER") setAssigneeId((current) => current || session.user.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user.id]);
+
   function toggleGroup(g: string) {
     setGroups((current) => (current.includes(g) ? current.filter((x) => x !== g) : [...current, g]));
   }
