@@ -23,10 +23,6 @@ function formatDate(iso: string) {
   });
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-}
-
 export default function DailyActivityPage() {
   const { data: session } = useSession();
   const isAdmin = session?.user.role === "ADMIN";
@@ -104,15 +100,25 @@ export default function DailyActivityPage() {
 
   const [noteText, setNoteText] = useState("");
   const [posting, setPosting] = useState(false);
-  async function addNote(e: React.FormEvent) {
+  async function addNotes(e: React.FormEvent) {
     e.preventDefault();
-    if (!noteText.trim()) return;
+    // One line, one activity — lets someone paste or type their whole list
+    // at once instead of adding items one at a time.
+    const lines = noteText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (lines.length === 0) return;
     setPosting(true);
-    await fetch("/api/daily-activity", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: noteText }),
-    });
+    await Promise.all(
+      lines.map((line) =>
+        fetch("/api/daily-activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: line }),
+        })
+      )
+    );
     setNoteText("");
     setPosting(false);
     mutate();
@@ -172,10 +178,10 @@ export default function DailyActivityPage() {
           {entries.length === 0 ? (
             <p className="text-sm text-slate-500">Nothing logged for this day.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {entries.map((entry, i) => (
-                <li key={i} className="group flex gap-3">
-                  <span className="mt-0.5 w-14 shrink-0 text-xs tabular-nums text-slate-400">{formatTime(entry.time)}</span>
+                <li key={i} className="group flex items-start gap-2.5">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
                   <div className="min-w-0 flex-1">
                     {entry.kind === "completed" ? (
                       <p className="text-sm">
@@ -212,17 +218,19 @@ export default function DailyActivityPage() {
           )}
 
           {isOwnDay && isToday && (
-            <form onSubmit={addNote} className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
-              <input
-                type="text"
+            <form onSubmit={addNotes} className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+              <textarea
                 className="input"
-                placeholder="What did you work on? (not tied to a task)"
+                rows={3}
+                placeholder={"List what you worked on today, one per line—not tied to a task\ne.g.\nFollowed up with vendor on invoice\nSat in on the 2pm ops sync"}
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
               />
-              <button type="submit" className="btn-primary shrink-0" disabled={posting || !noteText.trim()}>
-                {posting ? "Adding..." : "Add"}
-              </button>
+              <div className="flex justify-end">
+                <button type="submit" className="btn-primary" disabled={posting || !noteText.trim()}>
+                  {posting ? "Adding..." : "Add to today's list"}
+                </button>
+              </div>
             </form>
           )}
         </div>
