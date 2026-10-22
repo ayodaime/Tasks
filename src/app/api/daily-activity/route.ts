@@ -3,16 +3,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { taskAccessWhere } from "@/lib/taskAccess";
+import { userGroups, groupsOverlap } from "@/lib/groups";
 
-// What someone "did" on a given day, built from data that already exists —
-// no separate daily-log entry to fill in. Two sources, merged into one feed:
-// tasks they're the assignee on that moved to Done that day (status + the
-// task's updatedAt is the closest signal we have to a completion time, since
-// status changes aren't logged separately), and progress comments they
-// posted that day. Access is naturally scoped the same way the rest of the
-// app is: every query stays inside taskAccessWhere(viewer), so asking about
-// someone outside your own team(s) just comes back empty rather than needing
-// a separate permission check.
+// What someone "did" on a given day, from three sources merged into one
+// feed: tasks they're the assignee on that moved to Done that day (the
+// task's updatedAt is the closest signal we have to a completion time,
+// since status changes aren't logged separately), progress comments they
+// posted that day, and free-form notes they wrote themselves (not tied to
+// any task). Tasks and comments are naturally scoped by taskAccessWhere,
+// same as everywhere else in the app; notes have no task to inherit that
+// scoping from, so viewing someone else's notes is checked explicitly below.
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,10 +25,19 @@ export async function GET(req: Request) {
   const start = new Date(`${date}T00:00:00.000Z`);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { subteams: true } });
+  if (!user) return NextResponse.json({ error: "User not found." }, { status: 404 });
+
+  if (userId !== session.user.id && session.user.role !== "ADMIN") {
+    const targetGroups = userGroups({ department: user.department, subteams: user.subteams.map((s) => s.team) });
+    if (!groupsOverlap(userGroups(session.user), targetGroups)) {
+      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    }
+  }
+
   const accessWhere = taskAccessWhere(session.user);
 
-  const [user, completedTasks, comments] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true } }),
+  const [completedTasks, comments, notes] = await Promise.all([
     prisma.task.findMany({
       where: { ...accessWhere, assigneeId: userId, status: "DONE", updatedAt: { gte: start, lt: end } },
       select: { id: true, title: true, updatedAt: true },
@@ -39,14 +48,37 @@ export async function GET(req: Request) {
       select: { id: true, body: true, createdAt: true, task: { select: { id: true, title: true } } },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.dailyNote.findMany({
+      where: { authorId: userId, createdAt: { gte: start, lt: end } },
+      select: { id: true, body: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
-
-  if (!user) return NextResponse.json({ error: "User not found." }, { status: 404 });
 
   return NextResponse.json({
     date,
-    user,
+    user: { id: user.id, name: user.name },
     completed: completedTasks,
     updates: comments.map((c) => ({ id: c.id, body: c.body, createdAt: c.createdAt, taskId: c.task.id, taskTitle: c.task.title })),
+    notes,
   });
+}
+
+// Writing a note for yourself, for "right now" — there's no way to backdate
+// one, which keeps this an honest log of what you did rather than something
+// filled in after the fact.
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json().catch(() => null);
+  const text = typeof body?.body === "string" ? body.body.trim() : "";
+  if (!text) return NextResponse.json({ error: "Note can't be empty." }, { status: 400 });
+
+  const note = await prisma.dailyNote.create({
+    data: { body: text, authorId: session.user.id },
+    select: { id: true, body: true, createdAt: true },
+  });
+
+  return NextResponse.json(note, { status: 201 });
 }

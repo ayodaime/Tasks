@@ -38,7 +38,9 @@ export default function DailyActivityPage() {
   const peopleOptions = isAdmin ? users : users?.filter((u) => u.id === session?.user.id || groupsOverlap(userGroups(u), ownGroups));
 
   const effectiveUserId = userId || session?.user.id || "";
-  const { data, isLoading } = useSWR<DailyActivity>(
+  const isOwnDay = effectiveUserId === session?.user.id;
+  const isToday = date === todayISO();
+  const { data, isLoading, mutate } = useSWR<DailyActivity>(
     effectiveUserId ? `/api/daily-activity?date=${date}&userId=${effectiveUserId}` : null,
     fetcher
   );
@@ -58,7 +60,13 @@ export default function DailyActivityPage() {
       taskId: u.taskId,
       body: u.body,
     }));
-    return [...completed, ...updates].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+    const notes = data.notes.map((n) => ({
+      kind: "note" as const,
+      time: n.createdAt,
+      id: n.id,
+      body: n.body,
+    }));
+    return [...completed, ...updates, ...notes].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
   }, [data]);
 
   const copyText = useMemo(() => {
@@ -72,9 +80,14 @@ export default function DailyActivityPage() {
     if (data.updates.length > 0) {
       lines.push("Updates:");
       for (const u of data.updates) lines.push(`- ${u.taskTitle}: ${u.body}`);
+      lines.push("");
     }
-    if (data.completed.length === 0 && data.updates.length === 0) lines.push("Nothing logged.");
-    return lines.join("\n");
+    if (data.notes.length > 0) {
+      lines.push("Notes:");
+      for (const n of data.notes) lines.push(`- ${n.body}`);
+    }
+    if (data.completed.length === 0 && data.updates.length === 0 && data.notes.length === 0) lines.push("Nothing logged.");
+    return lines.join("\n").trim();
   }, [data]);
 
   const [copied, setCopied] = useState(false);
@@ -87,6 +100,30 @@ export default function DailyActivityPage() {
       // Clipboard access can be denied by the browser; nothing to recover
       // from here, the text is still selectable on the page.
     }
+  }
+
+  const [noteText, setNoteText] = useState("");
+  const [posting, setPosting] = useState(false);
+  async function addNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteText.trim()) return;
+    setPosting(true);
+    await fetch("/api/daily-activity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: noteText }),
+    });
+    setNoteText("");
+    setPosting(false);
+    mutate();
+  }
+
+  async function removeNote(id: string) {
+    mutate((current) => (current ? { ...current, notes: current.notes.filter((n) => n.id !== id) } : current), {
+      revalidate: false,
+    });
+    await fetch(`/api/daily-activity/${id}`, { method: "DELETE" });
+    mutate();
   }
 
   return (
@@ -137,9 +174,9 @@ export default function DailyActivityPage() {
           ) : (
             <ul className="space-y-3">
               {entries.map((entry, i) => (
-                <li key={i} className="flex gap-3">
+                <li key={i} className="group flex gap-3">
                   <span className="mt-0.5 w-14 shrink-0 text-xs tabular-nums text-slate-400">{formatTime(entry.time)}</span>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     {entry.kind === "completed" ? (
                       <p className="text-sm">
                         <span className="mr-1.5 text-green-600">&#10003;</span>
@@ -148,18 +185,45 @@ export default function DailyActivityPage() {
                           {entry.title}
                         </Link>
                       </p>
-                    ) : (
+                    ) : entry.kind === "update" ? (
                       <p className="text-sm">
                         <Link href={`/tasks/${entry.taskId}`} className="font-medium hover:underline">
                           {entry.title}
                         </Link>
                         <span className="text-slate-500">: {entry.body}</span>
                       </p>
+                    ) : (
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm text-slate-700">{entry.body}</p>
+                        {isOwnDay && (
+                          <button
+                            onClick={() => removeNote(entry.id)}
+                            className="shrink-0 text-xs text-slate-400 opacity-0 hover:text-red-600 group-hover:opacity-100"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </li>
               ))}
             </ul>
+          )}
+
+          {isOwnDay && isToday && (
+            <form onSubmit={addNote} className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
+              <input
+                type="text"
+                className="input"
+                placeholder="What did you work on? (not tied to a task)"
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+              />
+              <button type="submit" className="btn-primary shrink-0" disabled={posting || !noteText.trim()}>
+                {posting ? "Adding..." : "Add"}
+              </button>
+            </form>
           )}
         </div>
       )}
