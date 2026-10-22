@@ -45,6 +45,7 @@ model User {
   attachments       Attachment[]
   notifications     Notification[]
   pushSubscriptions PushSubscription[]
+  dailyNotes        DailyNote[]
 }
 
 // team: "DESIGN_TEAM" | "ONLINE_BRANDING" | "OFFLINE_BRANDING" | "SOCIAL_MEDIA_TEAM"
@@ -55,6 +56,21 @@ model UserSubteam {
   team   String
 
   @@unique([userId, team])
+}
+
+// A free-form line someone writes themselves about what they did that day —
+// not tied to a task. Shows up in their Daily Activity feed alongside
+// completed tasks and task comments, for things that don't warrant a task of
+// their own (a meeting, an ad-hoc request, general admin work).
+model DailyNote {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, createdAt])
 }
 
 // status: "TODO" | "IN_PROGRESS" | "BLOCKED" | "DONE"

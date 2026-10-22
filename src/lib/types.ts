@@ -54,3 +54,11 @@ export type NotificationItem = {
   createdAt: string;
   taskId: string | null;
 };
+
+export type DailyActivity = {
+  date: string;
+  user: { id: string; name: string };
+  completed: { id: string; title: string; updatedAt: string }[];
+  updates: { id: string; body: string; createdAt: string; taskId: string; taskTitle: string }[];
+  notes: { id: string; body: string; createdAt: string }[];
+};

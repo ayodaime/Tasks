@@ -167,6 +167,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       taskId: task.id,
     });
   }
+  // The manager in charge finds out when their task gets done, not just when
+  // they're first put in charge of it.
+  if (data.status === "DONE" && existing.status !== "DONE" && task.managerId && task.managerId !== session.user.id) {
+    notifyUser(task.managerId, {
+      type: "TASK_COMPLETED",
+      message: `"${task.title}" was marked done by ${session.user.name ?? "a teammate"}`,
+      taskId: task.id,
+    });
+  }
 
   return NextResponse.json(serializeTask(task));
 }
