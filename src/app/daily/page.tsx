@@ -65,39 +65,6 @@ export default function DailyActivityPage() {
     return [...completed, ...updates, ...notes].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
   }, [data]);
 
-  const copyText = useMemo(() => {
-    if (!data) return "";
-    const lines = [`Daily activity — ${data.user.name} — ${formatDate(data.date)}`, ""];
-    if (data.completed.length > 0) {
-      lines.push("Completed:");
-      for (const t of data.completed) lines.push(`- ${t.title}`);
-      lines.push("");
-    }
-    if (data.updates.length > 0) {
-      lines.push("Updates:");
-      for (const u of data.updates) lines.push(`- ${u.taskTitle}: ${u.body}`);
-      lines.push("");
-    }
-    if (data.notes.length > 0) {
-      lines.push("Notes:");
-      for (const n of data.notes) lines.push(`- ${n.body}`);
-    }
-    if (data.completed.length === 0 && data.updates.length === 0 && data.notes.length === 0) lines.push("Nothing logged.");
-    return lines.join("\n").trim();
-  }, [data]);
-
-  const [copied, setCopied] = useState(false);
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(copyText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard access can be denied by the browser; nothing to recover
-      // from here, the text is still selectable on the page.
-    }
-  }
-
   const [noteText, setNoteText] = useState("");
   const [posting, setPosting] = useState(false);
   async function addNotes(e: React.FormEvent) {
@@ -156,9 +123,6 @@ export default function DailyActivityPage() {
               </option>
             ))}
         </select>
-        <button className="btn-secondary ml-auto" onClick={handleCopy} disabled={!data}>
-          {copied ? "Copied!" : "Copy as text"}
-        </button>
       </div>
 
       {isLoading && (
