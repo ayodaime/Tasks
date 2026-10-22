@@ -32,7 +32,8 @@ h3 {
 .btn {
   @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium
     transition-all duration-150 ease-out
-    disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:translate-y-0;
+    disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:translate-y-0 disabled:scale-100
+    active:scale-[0.97];
 }
 
 .btn-primary {

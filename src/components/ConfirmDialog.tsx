@@ -27,8 +27,8 @@ export default function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/30" onClick={onCancel} />
-      <div className="card relative w-full max-w-sm space-y-3 p-5">
+      <div className="absolute inset-0 bg-slate-900/30 animate-fade-in" onClick={onCancel} />
+      <div className="card relative w-full max-w-sm animate-slide-up space-y-3 p-5">
         <h2 className="text-base font-semibold text-slate-900">{title}</h2>
         <p className="text-sm text-slate-600">{message}</p>
         <div className="flex justify-end gap-2 pt-2">

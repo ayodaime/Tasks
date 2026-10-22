@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { STATUS_LABELS, TASK_STATUSES, STATUS_ACCENT } from "@/lib/constants";
 import { StatusBadge, PriorityBadge } from "@/components/Badges";
 import { taskAccessWhere } from "@/lib/taskAccess";
+import AnimatedNumber from "@/components/AnimatedNumber";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -45,7 +46,7 @@ export default async function DashboardPage() {
   const completionRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="animate-fade-in space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <Link href="/tasks/new" className="btn-primary">
@@ -58,7 +59,9 @@ export default async function DashboardPage() {
           <div key={status} className="card relative overflow-hidden p-4">
             <span className={`absolute inset-x-0 top-0 h-1 ${STATUS_ACCENT[status]}`} />
             <p className="text-sm text-slate-500">{STATUS_LABELS[status]}</p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">{countByStatus[status]}</p>
+            <p className="mt-1 text-3xl font-semibold tracking-tight">
+              <AnimatedNumber value={countByStatus[status]} />
+            </p>
           </div>
         ))}
       </section>
