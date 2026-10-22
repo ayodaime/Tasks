@@ -38,6 +38,14 @@ export default function TaskDetailContent({
   const canAssign = session?.user.role !== "OFFICER";
   const isPrivileged = session?.user.role === "ADMIN" || session?.user.role === "MANAGER" || session?.user.role === "SUPERVISOR";
   const { data: task, mutate, isLoading } = useSWR<TaskDetail>(`/api/tasks/${taskId}`, fetcher);
+  // Officers can already change status via the dropdown, but on a task they
+  // made for themselves (their own personal to-do, no one else involved) a
+  // one-click "Mark as done" is a faster way to close it out.
+  const showDoneButton =
+    session?.user.role === "OFFICER" &&
+    task?.createdBy.id === session.user.id &&
+    task?.assignee?.id === session.user.id &&
+    task?.status !== "DONE";
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
   // Matches the API's own rule: a task can only be deleted by a
   // supervisor/manager/admin, or by whoever created it.
@@ -236,6 +244,11 @@ export default function TaskDetailContent({
           {task.dueDate && <span>Due {new Date(task.dueDate).toLocaleDateString()}</span>}
           <StatusBadge status={task.status} />
           <PriorityBadge priority={task.priority} />
+          {showDoneButton && (
+            <button className="btn-primary ml-auto text-xs" onClick={() => updateField("status", "DONE")}>
+              Mark as done
+            </button>
+          )}
         </div>
       </div>
 
