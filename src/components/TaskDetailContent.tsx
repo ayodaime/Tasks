@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { StatusBadge, PriorityBadge } from "@/components/Badges";
 import Skeleton from "@/components/Skeleton";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 import {
   TASK_STATUSES,
   TASK_PRIORITIES,
@@ -50,6 +51,7 @@ export default function TaskDetailContent({
   // Matches the API's own rule: a task can only be deleted by a
   // supervisor/manager/admin, or by whoever created it.
   const canDelete = isPrivileged || task?.createdBy.id === session?.user.id;
+  const { showToast } = useToast();
 
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
@@ -59,11 +61,18 @@ export default function TaskDetailContent({
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function updateField(field: string, value: unknown) {
-    await fetch(`/api/tasks/${taskId}`, {
+    const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [field]: value }),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      showToast(body.error || "Couldn't save that change — try again.", "error");
+    }
+    // Refetch either way: on success this picks up the new value: on
+    // failure it reverts the field to the server's actual value, since
+    // nothing local was changed optimistically.
     mutate();
   }
 
@@ -77,13 +86,18 @@ export default function TaskDetailContent({
     e.preventDefault();
     if (!comment.trim()) return;
     setPosting(true);
-    await fetch(`/api/tasks/${taskId}/comments`, {
+    const res = await fetch(`/api/tasks/${taskId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body: comment }),
     });
-    setComment("");
     setPosting(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      showToast(body.error || "Couldn't post your comment — try again.", "error");
+      return; // keep what they typed so they don't lose it
+    }
+    setComment("");
     mutate();
   }
 
@@ -93,9 +107,14 @@ export default function TaskDetailContent({
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-    await fetch(`/api/tasks/${taskId}/attachments`, { method: "POST", body: formData });
+    const res = await fetch(`/api/tasks/${taskId}/attachments`, { method: "POST", body: formData });
     setUploading(false);
     if (fileInput.current) fileInput.current.value = "";
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      showToast(body.error || "Couldn't upload that file — try again.", "error");
+      return;
+    }
     mutate();
   }
 
@@ -114,7 +133,7 @@ export default function TaskDetailContent({
   if (!task) return <p className="text-sm text-red-600">Task not found.</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       {confirmingDelete && (
         <ConfirmDialog
           title="Delete this task?"

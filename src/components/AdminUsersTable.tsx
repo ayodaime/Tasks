@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import Skeleton from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
 import {
   DEPARTMENTS,
   DEPARTMENT_LABELS,
@@ -24,10 +25,9 @@ const GROUPS: { key: Department | "UNASSIGNED"; label: string }[] = [
 export default function AdminUsersTable({ currentUserId }: { currentUserId: string }) {
   const { data: users, mutate, isLoading } = useSWR<UserSummary[]>("/api/users", fetcher);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   async function submitUpdate(userId: string, data: Record<string, unknown>) {
-    setError(null);
     setSavingId(userId);
 
     const res = await fetch(`/api/users/${userId}`, {
@@ -40,10 +40,11 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error || "Could not update staff member.");
+      showToast(body.error || "Could not update staff member.", "error");
       return;
     }
 
+    showToast("Saved");
     mutate();
   }
 
@@ -71,8 +72,6 @@ export default function AdminUsersTable({ currentUserId }: { currentUserId: stri
 
   return (
     <div className="space-y-6">
-      {error && <p className="rounded-md border border-red-100 bg-red-50 p-3 text-sm text-red-600">{error}</p>}
-
       {GROUPS.map((group) => {
         const members = users?.filter((u) =>
           group.key === "UNASSIGNED" ? !u.department : u.department === group.key

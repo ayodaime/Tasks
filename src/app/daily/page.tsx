@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import Skeleton from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
 import { userGroups, groupsOverlap } from "@/lib/groups";
 import type { DailyActivity, TeamDailyActivity, UserSummary } from "@/lib/types";
 
@@ -80,6 +81,7 @@ export default function DailyActivityPage() {
   const isAdmin = session?.user.role === "ADMIN";
   const [date, setDate] = useState(todayISO());
   const [userId, setUserId] = useState("");
+  const { showToast } = useToast();
 
   const { data: users } = useSWR<UserSummary[]>("/api/users", fetcher);
   const ownGroups = session ? userGroups(session.user) : [];
@@ -137,7 +139,7 @@ export default function DailyActivityPage() {
       .filter(Boolean);
     if (lines.length === 0) return;
     setPosting(true);
-    await Promise.all(
+    const results = await Promise.all(
       lines.map((line) =>
         fetch("/api/daily-activity", {
           method: "POST",
@@ -146,8 +148,9 @@ export default function DailyActivityPage() {
         })
       )
     );
-    setNoteText("");
     setPosting(false);
+    if (results.some((r) => !r.ok)) showToast("Some of that didn't save — try again.", "error");
+    setNoteText("");
     mutate();
   }
 
@@ -161,7 +164,7 @@ export default function DailyActivityPage() {
       .filter(Boolean);
     if (lines.length === 0) return;
     setPostingPlan(true);
-    await Promise.all(
+    const results = await Promise.all(
       lines.map((line) =>
         fetch("/api/daily-activity", {
           method: "POST",
@@ -170,8 +173,9 @@ export default function DailyActivityPage() {
         })
       )
     );
-    setPlanText("");
     setPostingPlan(false);
+    if (results.some((r) => !r.ok)) showToast("Some of that didn't save — try again.", "error");
+    setPlanText("");
     mutateTomorrow();
   }
 
@@ -179,7 +183,8 @@ export default function DailyActivityPage() {
     mutate((current) => (current ? { ...current, notes: current.notes.filter((n) => n.id !== id) } : current), {
       revalidate: false,
     });
-    await fetch(`/api/daily-activity/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/daily-activity/${id}`, { method: "DELETE" });
+    if (!res.ok) showToast("Couldn't remove that — try again.", "error");
     mutate();
   }
 
@@ -188,7 +193,8 @@ export default function DailyActivityPage() {
       (current) => (current ? { ...current, plans: current.plans.filter((p) => p.id !== id) } : current),
       { revalidate: false }
     );
-    await fetch(`/api/daily-activity/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/daily-activity/${id}`, { method: "DELETE" });
+    if (!res.ok) showToast("Couldn't remove that — try again.", "error");
     mutateTomorrow();
   }
 
@@ -198,7 +204,10 @@ export default function DailyActivityPage() {
     setDownloading(true);
     try {
       const res = await fetch(`/api/daily-activity/team?date=${date}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        showToast("Couldn't prepare that download — try again.", "error");
+        return;
+      }
       const team: TeamDailyActivity = await res.json();
       const blob = new Blob([formatTeamReport(team)], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -207,13 +216,14 @@ export default function DailyActivityPage() {
       a.download = `team-daily-activity-${date}.txt`;
       a.click();
       URL.revokeObjectURL(url);
+      showToast("Downloaded");
     } finally {
       setDownloading(false);
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Daily Activity</h1>
       </div>
