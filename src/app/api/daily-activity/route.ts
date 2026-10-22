@@ -5,14 +5,16 @@ import { prisma } from "@/lib/prisma";
 import { taskAccessWhere } from "@/lib/taskAccess";
 import { userGroups, groupsOverlap } from "@/lib/groups";
 
-// What someone "did" on a given day, from three sources merged into one
-// feed: tasks they're the assignee on that moved to Done that day (the
-// task's updatedAt is the closest signal we have to a completion time,
+// What someone "did" (and planned) on a given day, from four sources merged
+// into one feed: tasks they're the assignee on that moved to Done that day
+// (the task's updatedAt is the closest signal we have to a completion time,
 // since status changes aren't logged separately), progress comments they
-// posted that day, and free-form notes they wrote themselves (not tied to
-// any task). Tasks and comments are naturally scoped by taskAccessWhere,
-// same as everywhere else in the app; notes have no task to inherit that
-// scoping from, so viewing someone else's notes is checked explicitly below.
+// posted that day, free-form notes they wrote themselves (not tied to any
+// task), and plans for that day written on an earlier day (matched by
+// `forDate`, not `createdAt`). Tasks and comments are naturally scoped by
+// taskAccessWhere, same as everywhere else in the app; notes/plans have no
+// task to inherit that scoping from, so viewing someone else's is checked
+// explicitly below.
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,7 +39,7 @@ export async function GET(req: Request) {
 
   const accessWhere = taskAccessWhere(session.user);
 
-  const [completedTasks, comments, notes] = await Promise.all([
+  const [completedTasks, comments, notes, plans] = await Promise.all([
     prisma.task.findMany({
       where: { ...accessWhere, assigneeId: userId, status: "DONE", updatedAt: { gte: start, lt: end } },
       select: { id: true, title: true, updatedAt: true },
@@ -49,7 +51,12 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "asc" },
     }),
     prisma.dailyNote.findMany({
-      where: { authorId: userId, createdAt: { gte: start, lt: end } },
+      where: { authorId: userId, kind: "LOG", createdAt: { gte: start, lt: end } },
+      select: { id: true, body: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.dailyNote.findMany({
+      where: { authorId: userId, kind: "PLAN", forDate: date },
       select: { id: true, body: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     }),
@@ -61,12 +68,16 @@ export async function GET(req: Request) {
     completed: completedTasks,
     updates: comments.map((c) => ({ id: c.id, body: c.body, createdAt: c.createdAt, taskId: c.task.id, taskTitle: c.task.title })),
     notes,
+    plans,
   });
 }
 
-// Writing a note for yourself, for "right now" — there's no way to backdate
-// one, which keeps this an honest log of what you did rather than something
-// filled in after the fact.
+// Writing a note (or a plan) for yourself. A "LOG" note is always for
+// "right now" — there's no way to backdate one, which keeps it an honest
+// log of what you did rather than something filled in after the fact. A
+// "PLAN" note instead carries a `forDate` saying which future day it's
+// for; the client only ever sends tomorrow's date, keeping this a
+// next-day plan rather than an open-ended scheduler.
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -75,8 +86,15 @@ export async function POST(req: Request) {
   const text = typeof body?.body === "string" ? body.body.trim() : "";
   if (!text) return NextResponse.json({ error: "Note can't be empty." }, { status: 400 });
 
+  const kind = body?.kind === "PLAN" ? "PLAN" : "LOG";
+  let forDate: string | null = null;
+  if (kind === "PLAN") {
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    forDate = typeof body?.forDate === "string" && body.forDate === tomorrow ? body.forDate : tomorrow;
+  }
+
   const note = await prisma.dailyNote.create({
-    data: { body: text, authorId: session.user.id },
+    data: { body: text, authorId: session.user.id, kind, forDate },
     select: { id: true, body: true, createdAt: true },
   });
 

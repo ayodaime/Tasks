@@ -58,19 +58,27 @@ model UserSubteam {
   @@unique([userId, team])
 }
 
-// A free-form line someone writes themselves about what they did that day —
-// not tied to a task. Shows up in their Daily Activity feed alongside
-// completed tasks and task comments, for things that don't warrant a task of
-// their own (a meeting, an ad-hoc request, general admin work).
+// A free-form line someone writes themselves in their Daily Activity feed,
+// not tied to a task. Two kinds, told apart by `kind`:
+// - "LOG" (default): what they did, bucketed by the day it was written
+//   (createdAt) — same as before. `forDate` is unused.
+// - "PLAN": something they intend to do on a future day. `forDate` (a
+//   "YYYY-MM-DD" string) holds which day it's a plan for, independent of
+//   createdAt (the day it was actually written, usually the day before).
+//   Lets a given day's view show both what was planned for it and what
+//   actually got logged.
 model DailyNote {
   id        String   @id @default(cuid())
   body      String
+  kind      String   @default("LOG")
+  forDate   String?
   createdAt DateTime @default(now())
 
   authorId String
   author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId, createdAt])
+  @@index([authorId, forDate])
 }
 
 // status: "TODO" | "IN_PROGRESS" | "BLOCKED" | "DONE"
