@@ -21,6 +21,7 @@ import {
 const BASE_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/tasks", label: "All Tasks" },
+  { href: "/daily", label: "Daily Activity" },
 ];
 
 function NavIcon({ href, className }: { href: string; className?: string }) {
@@ -44,6 +45,15 @@ function NavIcon({ href, className }: { href: string; className?: string }) {
       <svg {...props}>
         <circle cx="12" cy="12" r="8.5" />
         <path strokeLinecap="round" d="M12 8.5v7M8.5 12h7" />
+      </svg>
+    );
+  }
+  if (href === "/daily") {
+    return (
+      <svg {...props}>
+        <rect x="4" y="5" width="16" height="15" rx="2" />
+        <path strokeLinecap="round" d="M4 9.5h16M8 3v4M16 3v4" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="m8.5 14 2 2 4-4" />
       </svg>
     );
   }
